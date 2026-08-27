@@ -1,6 +1,7 @@
   
 # UNIVERSIDAD NACIONAL DE CÓRDOBA |  FACULTAD DE CIENCIAS EXACTAS, FÍSICAS Y NATURALES  
-![][image1]  
+<img width="532" height="520" alt="image1" src="https://github.com/user-attachments/assets/85d62a69-318f-4106-b3d6-e28ec01adab9" />
+
 
 ## **REDES DE COMPUTADORAS**  
 ### **Trabajo Practico de laboratorio N°2:**  
@@ -34,7 +35,12 @@ $f' = f (v+v0 / v-vs)$
 Si se aleja  
 $f' = f (v-v0v+vs)$
 
-Ejemplo con la velocidad del sonido 343.4 m/s
+### Ejemplo con la velocidad del sonido 343.4 m/s
+<img width="445" height="467" alt="image3" src="https://github.com/user-attachments/assets/e6f9efc8-4d4f-4275-abdf-eaa4c7493d3c" />
+<img width="445" height="467" alt="image5" src="https://github.com/user-attachments/assets/3c66d6b4-58da-4c50-beb0-d1c85cd9261e" />
+
+
+
 
 **Se aprecian varias características:**
 
@@ -46,7 +52,8 @@ B)
 
 Debido a que este efecto es proporcional a la frecuencia de la onda emisora, es más afectado por bandas de mayor frecuencia, es decir. Las más afectadas son las SHF Y EHF , las transmisiones de microondas como radares y comunicaciones de telefonía moderna
 
-![][image2]
+<img width="780" height="488" alt="image4" src="https://github.com/user-attachments/assets/7ac90416-f164-4d30-ac20-dddd60636b6c" />
+
 
 Por otra parte, las bandas de frecuencia menos afectadas son las MF HF O VHF las ondas de radio AM , FM y la TV.
 
