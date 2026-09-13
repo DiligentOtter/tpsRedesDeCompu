@@ -1,7 +1,7 @@
 # UNIVERSIDAD NACIONAL DE CÓRDOBA
 ### Facultad de Ciencias Exactas, Físicas y Naturales
 ## Redes de Computadoras
-## Trabajo Práctico de Teórico Nº2: Transmisión de Datos
+## Trabajo Práctico de Teórico Nº4: Capas de Acceso en Redes Locales, Protocolos y Fundamentos
 
 #### Comisión: ICOMP 24-3
 #### Docentes: Oliva, Facundo
