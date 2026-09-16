@@ -70,9 +70,84 @@
 
 ## Item 3
 
-*(pendiente)*
+1.
+A diferencia de las demas capas:
+
+- IP(capa de red):Esta proporcina un servicio de mejor esfuerzo para entregar los datagramas del host de origen al host de destino, pero no ofrece una garantia que dichos datos llegues correctamente en orden o que se dupliquen o corrompan
+
+- Etherner (Capa enlace):Se encarga del transporte de tramas entre dispositivos directamente conectados en un mismo segmentpo de red local, si bien detecta errores locales mediante CRC no realiza retrasmicionni control de flujo de extremo a extremo a traves de routers
+
+- TCP (capa trasnporte):ahora este si resuelve el trasporte end to end entre aplicaciones mediante:
+
+
+* **Transferencia confiable de datos:** Garantiza que los datos lleguen sin errores, retransmitiendo segmentos perdidos o dañados.
+* **Entrega ordenada:** Utiliza números de secuencia para reordenar los paquetes que llegan fuera de secuencia.
+* **Eliminación de duplicados:** Identifica y descarta copias repetidas mediante los números de secuencia.
+* **Control de flujo:** Evita que el emisor sature el búfer de recepción del receptor mediante la ventana deslizante.
+* **Control de congestión:** Modula la velocidad de envío para no saturar los routers intermedios de la red.
+* **Multiplexación/Desmultiplexación:** Permite diferenciar el tráfico de múltiples aplicaciones dentro del mismo host mediante números de puerto.
+
+B
+Un segmento TCP incluye una cabecera (*header*) estructurada con los siguientes campos principales[8]:
+
+* **Puerto de Origen (** **Source Port** **, 16 bits) y Puerto de Destino (** **Destination Port** **, 16 bits):** Identifican los procesos o aplicaciones emisora y receptora en los hosts extremos.
+* **Número de Secuencia (** **Sequence Number** **, 32 bits):** Indica la posición del primer byte de datos de este segmento dentro del flujo continuo de bytes transmitido.
+* **Número de Reconocimiento (** **Acknowledgment Number** **, 32 bits):** Número del siguiente byte que la entidad receptora espera recibir (confirmación acumulativa).
+* **Longitud de Cabecera / Offset (** **Data Offset** **, 4 bits):** Especifica el tamaño de la cabecera TCP en palabras de 32 bits.
+* **Flags / Bits de Control (6 bits o más):**
+  * **SYN:** Inicia y sincroniza el establecimiento de la conexión.
+  * **ACK:** Indica que el campo *Acknowledgment Number* es válido.
+  * **FIN:** Solicita la finalización/cierre de la conexión de forma ordenada.
+  * **RST:** Fuerza el reinicio inmediato de una conexión anormal o rechazada.
+  * **PSH:** Solicita que los datos se entreguen inmediatamente a la aplicación sin esperar a llenar el búfer.
+  * **URG:** Señala que el segmento contiene datos urgentes.
+* **Tamaño de Ventana (** **Window Size** **, 16 bits):** Indica la cantidad de bytes que el receptor está dispuesto a aceptar en su búfer (control de flujo).
+* **Suma de Comprobación (** **Checksum** **, 16 bits):** Utilizada para la detección de errores en la cabecera y datos (utilizando el complemento a 1).
+
+
+C)
+**Three-Way Handshake (Establecimiento de Conexión)**
+Antes de intercambiar datos, el cliente y el servidor negocian los parámetros iniciales en tres pasos
+
+- 1 `SYN`: El cliente envía un segmento con la bandera SYN = 1 y un número de secuencia inicial aleatorio ($Seq = x$)
+
+- 2 `SY-ACK`:El servidor responde con un segmento con las banderas SYN = 1 y ACK = 1, confirmando el número de secuencia del cliente ($Ack = x + 1$) y enviando su propio número de secuencia inicial ($Seq = y$)
+
+- `ACK`:El cliente responde con ACK = 1, confirmando la secuencia del servidor ($Ack = y + 1$). Este segmento ya puede transportar datos de la capa de aplicación
+
+**Four-Way Handshake / Teardown (Cierre de Conexión)**
+
+Cualquiera de los dos extremos puede iniciar la finalización de la conexión de forma simétrica:
+
+
+- (`FIN` cliente $\rightarrow$ servidor): El cliente envía un segmento con FIN = 1 ($Seq = a$) para cerrar el flujo de datos en su -
+
+- (`ACK` servidor $\rightarrow$ cliente): El servidor confirma el pedido con ACK = 1 ($Ack = a + 1$). La conexión queda semicerrada (half-close).
+- Paso 3 (`FIN` servidor $\rightarrow$ cliente): Cuando el servidor termina de enviar sus datos pendientes, envía su propio segmento con FIN = 1 ($Seq = b$).
+- (`ACK` cliente $\rightarrow$ servidor): El cliente responde con ACK = 1 ($Ack = b + 1$) y entra en un estado de espera (TIME_WAIT) antes de cerrar definitivamente la conexión.
+
+**Practico**
+
+**Funciones de packetSender (linux)**
+![alt text](image.png)
+
+**Para levantar un server TCP **
+``packetsender -l -t -b 52001``
+numero a eleccion
+
+**Ahora se puede abrir otra terminal del client para enviar paquetes**
+![alt text](image-11.png)
+
+`packetsender -taw 500 127.0.0.1 52001 "hola \r"`
+
+**Ahora vamos a aplicar el filtro a ver si logramos ver el handshake**
+![alt text](image-12.png)
+**y luego podemos ver nuestro mensaje en follow TCP**
+![alt text](image-13.png)
 
 ---
+
+
 
 ## Item 4
 
