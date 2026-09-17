@@ -1,5 +1,6 @@
 # UNIVERSIDAD NACIONAL DE CÓRDOBA
 ### Facultad de Ciencias Exactas, Físicas y Naturales
+![alt text](image3.png)
 ## Redes de Computadoras
 ## Trabajo Práctico de Teórico Nº4: Capas de Acceso en Redes Locales, Protocolos y Fundamentos
 
