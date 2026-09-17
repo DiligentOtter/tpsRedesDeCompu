@@ -1,12 +1,18 @@
-# UNIVERSIDAD NACIONAL DE CÓRDOBA
+# Universidad Nacional de Córdoba
 ### Facultad de Ciencias Exactas, Físicas y Naturales
-![alt text](image3.png)
-## Redes de Computadoras
-## Trabajo Práctico de Teórico Nº4: Capas de Acceso en Redes Locales, Protocolos y Fundamentos
 
-#### Comisión: ICOMP 24-3
-#### Docentes: Oliva, Facundo
-#### Alumnos:
+![alt text](images/image3.png)
+
+# Redes de Computadoras
+## Trabajo Práctico de Teórico N.º 4: Capas de Acceso en Redes Locales, Protocolos y Fundamentos
+
+| | |
+|---|---|
+| **Comisión** | ICOMP 24-3 |
+| **Docente** | Oliva, Facundo |
+| **Año** | 2026 |
+
+**Alumnos:**
 - Lamas, Matías Angel
 - Torres Sosa, Candelaria
 - Baiutti, Bruno Augusto
@@ -15,177 +21,222 @@
 - Pinque, Emanuel Leandro
 - Mayne, William Annesley
 
-#### Año: 2026
+---
+
+## Ítem 1 — Direccionamiento y trama Ethernet
+
+### B) MAC vs. IP
+
+Una dirección **MAC** (Media Access Control) es un identificador único de 48 bits grabado en la tarjeta de red (NIC) de un dispositivo; permite identificar de manera inequívoca a un equipo dentro de una red LAN.
+
+La dirección **IP** (Internet Protocol), en cambio, es una dirección entre redes que permite ubicar a un destinatario de forma sencilla a través de Internet: es pública mientras dure la ruta, mientras que la MAC solo es visible dentro del segmento local.
+
+### C) Estructura de la trama Ethernet
+
+La trama Ethernet, transmitida en la capa de enlace de datos, mide entre 64 y 1518 bytes y contiene los siguientes campos de cabecera:
+
+| Campo | Tamaño | Descripción |
+|---|---|---|
+| Preámbulo + SFD | 8 bytes | Ristra de 0s y 1s alternados que sincroniza el reloj del receptor |
+| MAC destino | 6 bytes | — |
+| MAC origen | 6 bytes | — |
+| EtherType | 2 bytes | Identifica el protocolo de capa 3 encapsulado (IPv4 o IPv6) |
+| Payload | 46–1500 bytes | Paquete IP real, con padding mínimo de 46 bytes |
+| FCS | — | Frame Check Sequence: código de redundancia cíclica para detectar errores |
+
+### D) El campo EtherType
+
+Indica qué protocolo viaja en la capa superior:
+
+| Valor | Protocolo |
+|---|---|
+| `0x0800` | IPv4 |
+| `0x86DD` | IPv6 |
+| `0x0806` | ARP |
 
 ---
 
-## Item 1
+## Ítem 2 — Análisis de una captura real (acceso a YouTube)
 
-- **B)**
-    Una dirección MAC (Media Access Control) es un id único de 48 bits grabado en la tarjeta de red (NIC) de un dispositivo, de esta forma es posible identificar de manera inequívoca a un dispositivo en una red LAN. Por otro lado, la dirección IP (Internet Protocol) es una dirección entre redes, que permite ubicar a un destinatario de un paquete de manera sencilla, no deja de ser público mientras que la dirección MAC solo la conoce la red interna, LAN o WAN.
+### A) Trama Ethernet II capturada
 
-- **C)**
-    La trama ethernet, transmitida en la capa de enlace de datos, es una trama de entre 64 y 1518 bytes. Esta trama contiene los siguientes elementos de cabecera:
-    - Preámbulo - SFD 8 bytes: Una ristra de 0s y 1s alternados para sincronizar el reloj del receptor
-    - MAC Destino 6 bytes
-    - MAC Origen 6 bytes
-    - Ether type 2 bytes: identifica el tipo de protocolo que viene en la capa 3, IPv4 o IPv6
-    - Payload 46 - 1500 bytes: paquete IP real con un padding de al menos 46 bytes
-    - Frecuencia de Verificación de trama (FCR): Es el código de redundancia cíclica de esta capa que le permite al receptor identificar errores
+El paquete observado, correspondiente a tráfico TCP al acceder a YouTube, proviene de la IP pública `142.251.155.4`, perteneciente a los servidores de Google.
 
-- **D)**
-    El encargado es el Ether type, donde tenemos que:
-    - 0x0800 -> IPv4
-    - 0x86DD -> IPv6
-    - 0x0806 -> ARP
+```
+24 4b fe 82 39 3d  02 10 18 cf 61 74  08 00
+```
+*Cabecera Ethernet II en hexadecimal — MAC destino · MAC origen · EtherType.*
 
----
+| | Dirección | Detalle |
+|---|---|---|
+| **MAC de origen** | `02:10:18:cf:61:74` | Gateway (router local). Wireshark resuelve su prefijo como MS-NLB (Microsoft Network Load Balancing). |
+| **MAC de destino** | `24:4b:fe:82:39:3d` | Tarjeta de red de la computadora receptora. |
 
-## Item 2
+### D) EtherType observado
 
-- **A)**
-    El paquete observado bajo la arquitectura del protocolo TCP (al acceder a YouTube) proviene de la IP pública 142.251.155.4, perteneciente a los servidores de Google. En este evento se registra la siguiente trama Ethernet II:
+Los últimos dos bytes de la cabecera (`0x0800`) corresponden al campo EtherType, indicando que el protocolo de capa de red encapsulado es **IPv4**.
 
-    ```
-    24 4b fe 82 39 3d 02 10 18 cf 61 74 08 00
-    ```
+![alt text](images/image1.png)
 
-    En este encabezado podemos identificar:
-    - **MAC de Origen:** 02:10:18:cf:61:74 — Corresponde al gateway (router local). Su prefijo es resuelto por Wireshark como MS-NLB (Microsoft Network Load Balancing).
-    - **MAC de Destino:** 24:4b:fe:82:39:3d — Dirección física de la tarjeta de red de la computadora receptora.
+### B) Direcciones de capa 3 (IP)
 
-- **D)**
-    Los últimos dos bytes del encabezado de la trama Ethernet (0x0800) representan el campo EtherType. Este valor le comunica a la capa de enlace que el protocolo encapsulado en la capa de red superior corresponde a IPv4.
+| | Dirección | Detalle |
+|---|---|---|
+| **IP de origen** | `142.251.155.4` | Dirección pública de los servidores de Google (YouTube). |
+| **IP de destino** | `192.168.0.77` | Dirección privada de la computadora receptora dentro de la red local. |
 
-- **B)**
-    En el encabezado del protocolo IP (Capa de Red), se identifican las siguientes direcciones de capa 3:
-    - **IP de Origen:** 142.251.155.4 — Dirección pública perteneciente a los servidores de Google (servicios de YouTube).
-    - **IP de Destino:** 192.168.0.77 — Dirección privada asignada a la computadora receptora dentro de la red local.
+### C) MAC vs. IP en el recorrido
 
-- **C)**
-    Las direcciones MAC e IP cumplen funciones completamente distintas dentro del modelo de red:
-    - **Dirección MAC (Capa 2):** Tiene alcance exclusivo dentro de la red local (LAN). Cambia en cada salto de red, por lo que la MAC de origen observada (02:10:18:cf:61:74) corresponde al router local (gateway) y no al emisor final.
-    - **Dirección IP (Capa 3):** Identifica el origen y destino finales a nivel global. Se mantiene a lo largo de toda la ruta a través de Internet.
+- **Dirección MAC (capa 2):** alcance exclusivo dentro de la LAN. Cambia en cada salto de red — la MAC de origen observada (`02:10:18:cf:61:74`) corresponde al gateway local, no al emisor final.
+- **Dirección IP (capa 3):** identifica origen y destino finales a nivel global, y se mantiene constante a lo largo de toda la ruta a través de Internet.
 
 ---
 
-## Item 3
+## Ítem 3 — IP, Ethernet y TCP: responsabilidades por capa
 
-1.
-A diferencia de las demas capas:
+### 1) Comparación entre capas
 
-- IP(capa de red):Esta proporcina un servicio de mejor esfuerzo para entregar los datagramas del host de origen al host de destino, pero no ofrece una garantia que dichos datos llegues correctamente en orden o que se dupliquen o corrompan
+- **IP · Capa de red:** ofrece un servicio de *mejor esfuerzo* para entregar datagramas del host origen al destino, sin garantizar orden, ausencia de duplicados o integridad.
+- **Ethernet · Capa de enlace:** transporta tramas entre dispositivos directamente conectados en el mismo segmento local. Detecta errores mediante CRC, pero no retransmite ni controla el flujo extremo a extremo a través de routers.
+- **TCP · Capa de transporte:** resuelve el transporte extremo a extremo entre aplicaciones, agregando las garantías que faltan en las capas inferiores:
+  - **Transferencia confiable de datos:** retransmite segmentos perdidos o dañados.
+  - **Entrega ordenada:** usa números de secuencia para reordenar paquetes fuera de orden.
+  - **Eliminación de duplicados:** descarta copias repetidas mediante números de secuencia.
+  - **Control de flujo:** evita saturar el búfer del receptor mediante ventana deslizante.
+  - **Control de congestión:** modula la velocidad de envío para no saturar routers intermedios.
+  - **Multiplexación / desmultiplexación:** diferencia el tráfico de múltiples aplicaciones mediante números de puerto.
 
-- Etherner (Capa enlace):Se encarga del transporte de tramas entre dispositivos directamente conectados en un mismo segmentpo de red local, si bien detecta errores locales mediante CRC no realiza retrasmicionni control de flujo de extremo a extremo a traves de routers
+### B) Cabecera del segmento TCP
 
-- TCP (capa trasnporte):ahora este si resuelve el trasporte end to end entre aplicaciones mediante:
+| Campo | Tamaño | Descripción |
+|---|---|---|
+| Puerto origen / destino | 16 bits c/u | Identifican los procesos emisor y receptor |
+| Número de secuencia | 32 bits | Posición del primer byte de este segmento en el flujo de bytes |
+| Número de ACK | 32 bits | Siguiente byte que el receptor espera recibir (confirmación acumulativa) |
+| Data offset | 4 bits | Tamaño de la cabecera TCP en palabras de 32 bits |
+| Window size | 16 bits | Bytes que el receptor está dispuesto a aceptar (control de flujo) |
+| Checksum | 16 bits | Detección de errores en cabecera y datos |
 
+**Flags de control:**
 
-* **Transferencia confiable de datos:** Garantiza que los datos lleguen sin errores, retransmitiendo segmentos perdidos o dañados.
-* **Entrega ordenada:** Utiliza números de secuencia para reordenar los paquetes que llegan fuera de secuencia.
-* **Eliminación de duplicados:** Identifica y descarta copias repetidas mediante los números de secuencia.
-* **Control de flujo:** Evita que el emisor sature el búfer de recepción del receptor mediante la ventana deslizante.
-* **Control de congestión:** Modula la velocidad de envío para no saturar los routers intermedios de la red.
-* **Multiplexación/Desmultiplexación:** Permite diferenciar el tráfico de múltiples aplicaciones dentro del mismo host mediante números de puerto.
+| Flag | Función |
+|---|---|
+| `SYN` | Inicia y sincroniza el establecimiento de la conexión |
+| `ACK` | Indica que el campo Acknowledgment Number es válido |
+| `FIN` | Solicita la finalización ordenada de la conexión |
+| `RST` | Fuerza el reinicio inmediato de una conexión anormal o rechazada |
+| `PSH` | Solicita entrega inmediata de datos a la aplicación |
+| `URG` | Señala que el segmento contiene datos urgentes |
 
-B
-Un segmento TCP incluye una cabecera (*header*) estructurada con los siguientes campos principales[8]:
+### C) Apertura y cierre de conexión
 
-* **Puerto de Origen (** **Source Port** **, 16 bits) y Puerto de Destino (** **Destination Port** **, 16 bits):** Identifican los procesos o aplicaciones emisora y receptora en los hosts extremos.
-* **Número de Secuencia (** **Sequence Number** **, 32 bits):** Indica la posición del primer byte de datos de este segmento dentro del flujo continuo de bytes transmitido.
-* **Número de Reconocimiento (** **Acknowledgment Number** **, 32 bits):** Número del siguiente byte que la entidad receptora espera recibir (confirmación acumulativa).
-* **Longitud de Cabecera / Offset (** **Data Offset** **, 4 bits):** Especifica el tamaño de la cabecera TCP en palabras de 32 bits.
-* **Flags / Bits de Control (6 bits o más):**
-  * **SYN:** Inicia y sincroniza el establecimiento de la conexión.
-  * **ACK:** Indica que el campo *Acknowledgment Number* es válido.
-  * **FIN:** Solicita la finalización/cierre de la conexión de forma ordenada.
-  * **RST:** Fuerza el reinicio inmediato de una conexión anormal o rechazada.
-  * **PSH:** Solicita que los datos se entreguen inmediatamente a la aplicación sin esperar a llenar el búfer.
-  * **URG:** Señala que el segmento contiene datos urgentes.
-* **Tamaño de Ventana (** **Window Size** **, 16 bits):** Indica la cantidad de bytes que el receptor está dispuesto a aceptar en su búfer (control de flujo).
-* **Suma de Comprobación (** **Checksum** **, 16 bits):** Utilizada para la detección de errores en la cabecera y datos (utilizando el complemento a 1).
+TCP utiliza un proceso de **tres vías** (Three-Way Handshake) para establecer la conexión, sincronizar los números de secuencia iniciales (ISN) y verificar la disponibilidad mutua. Para el cierre se usa un procedimiento de **cuatro vías** (Four-Way Handshake), ya que TCP es full-duplex y cada sentido debe cerrarse de forma independiente sin perder datos en tránsito.
 
+**Three-Way Handshake (establecimiento):**
 
-C)
-**Three-Way Handshake (Establecimiento de Conexión)**
-Antes de intercambiar datos, el cliente y el servidor negocian los parámetros iniciales en tres pasos
+1. **`SYN`** Cliente → Servidor. Envía `Seq = x`, un número de secuencia inicial aleatorio.
+2. **`SYN, ACK`** Servidor → Cliente. Confirma `Ack = x + 1` y envía su propio `Seq = y`.
+3. **`ACK`** Cliente → Servidor. Confirma `Ack = y + 1`; este segmento ya puede llevar datos de aplicación.
 
-- 1 `SYN`: El cliente envía un segmento con la bandera SYN = 1 y un número de secuencia inicial aleatorio ($Seq = x$)
+**Four-Way Handshake (cierre):** cualquiera de los dos extremos puede iniciar el cierre de forma simétrica.
 
-- 2 `SY-ACK`:El servidor responde con un segmento con las banderas SYN = 1 y ACK = 1, confirmando el número de secuencia del cliente ($Ack = x + 1$) y enviando su propio número de secuencia inicial ($Seq = y$)
+1. **`FIN`** Cliente → Servidor. `Seq = a`. Cierra el flujo de datos de su lado.
+2. **`ACK`** Servidor → Cliente. `Ack = a + 1`. La conexión queda semicerrada (*half-close*).
+3. **`FIN`** Servidor → Cliente. `Seq = b`, una vez que termina de enviar sus datos pendientes.
+4. **`ACK`** Cliente → Servidor. `Ack = b + 1`. Entra en `TIME_WAIT` antes del cierre definitivo.
 
-- `ACK`:El cliente responde con ACK = 1, confirmando la secuencia del servidor ($Ack = y + 1$). Este segmento ya puede transportar datos de la capa de aplicación
+### D) Handshake capturado en Wireshark
 
-**Four-Way Handshake / Teardown (Cierre de Conexión)**
+```
+[SYN]       55725 → 55654   SEQ = 0
+[SYN, ACK]  55654 → 55725   SEQ = 0   ACK = 1
+[ACK]       55725 → 55654   SEQ = 1   ACK = 1
 
-Cualquiera de los dos extremos puede iniciar la finalización de la conexión de forma simétrica:
+# Paquete de datos
+[PSH, ACK]  SEQ = 1   ACK = 1   LEN = 26
+```
 
+### E) Cierre capturado (Four-Way Handshake)
 
-- (`FIN` cliente $\rightarrow$ servidor): El cliente envía un segmento con FIN = 1 ($Seq = a$) para cerrar el flujo de datos en su -
+```
+[FIN, ACK]  55654 → 55725   SEQ = 1    ACK = 27   # el servidor inicia el cierre
+[ACK]       55725 → 55654   SEQ = 27   ACK = 2    # cliente confirma
+[FIN, ACK]  55725 → 55654   SEQ = 27   ACK = 2    # cliente cierra su lado
+[ACK]       55654 → 55725   SEQ = 2    ACK = 28   # servidor confirma el cierre
+```
 
-- (`ACK` servidor $\rightarrow$ cliente): El servidor confirma el pedido con ACK = 1 ($Ack = a + 1$). La conexión queda semicerrada (half-close).
-- Paso 3 (`FIN` servidor $\rightarrow$ cliente): Cuando el servidor termina de enviar sus datos pendientes, envía su propio segmento con FIN = 1 ($Seq = b$).
-- (`ACK` cliente $\rightarrow$ servidor): El cliente responde con ACK = 1 ($Ack = b + 1$) y entra en un estado de espera (TIME_WAIT) antes de cerrar definitivamente la conexión.
-
-**Practico**
+![alt text](images/image2.png)
 
 **Funciones de packetSender (linux)**
-![alt text](image.png)
 
-**Para levantar un server TCP **
-``packetsender -l -t -b 52001``
-numero a eleccion
+![alt text](images/image.png)
+
+**Para levantar un server TCP**
+
+```bash
+packetsender -l -t -b 52001
+```
+*número a elección*
 
 **Ahora se puede abrir otra terminal del client para enviar paquetes**
-![alt text](image-11.png)
 
-`packetsender -taw 500 127.0.0.1 52001 "hola \r"`
+![alt text](images/image-11.png)
+
+```bash
+packetsender -taw 500 127.0.0.1 52001 "hola \r"
+```
 
 **Ahora vamos a aplicar el filtro a ver si logramos ver el handshake**
-![alt text](image-12.png)
+
+![alt text](images/image-12.png)
+
 **y luego podemos ver nuestro mensaje en follow TCP**
-![alt text](image-13.png)
+
+![alt text](images/image-13.png)
+
+### F) Conclusión
+
+Como se pudo comprobar en la captura, resultó muy sencillo ver el contenido completo de un paquete viajando por la red —incluyendo el mensaje "Hola Redes de Computadoras" en texto plano— simplemente usando una herramienta de software gratuita y de uso libre como Wireshark, sin necesidad de conocimientos avanzados de programación ni de acceso privilegiado al sistema.
 
 ---
 
+## Ítem 4 — Interacción con servidor remoto vía Packet Sender
 
+**Parámetros de conexión:**
 
-## Item 4
+| Parámetro | Valor |
+|---|---|
+| IP de destino | `34.136.251.235` |
+| Puerto de destino | `5555` |
 
-Para el ejercicio propuesto se nos dieron los siguientes parámetros:
-
-**Parámetros de Conexión:**
-- IP de Destino: 34.136.251.235
-- Puerto de Destino: 5555
-
-**Registro de Interacción (Packet Sender / Servidor TCP):**
+**Registro de interacción:**
 
 | Solicitud | Respuesta |
 |---|---|
-| hola | hola :) |
-| pika | Server no conocer ese comando. Mi confundido. Probar otra cosa. |
-| fernetmodulation | seq: 7, payload: yo |
-| hola | hola :) |
-| ping | pong |
-| h | Server no conocer ese comando. Mi confundido. Probar otra cosa. |
+| `hola` | hola :) |
+| `pika` | Server no conocer ese comando. Mi confundido. Probar otra cosa. |
+| **`fernetmodulation`** | **seq: 7, payload: yo** |
+| `hola` | hola :) |
+| `ping` | pong |
+| `h` | Server no conocer ese comando. Mi confundido. Probar otra cosa. |
 
-**Resultado Clave:**
-Al enviar el comando `fernetmodulation`, el servidor retornó la secuencia 7 asociada al payload "yo" (`seq: 7, payload: yo`).
+> **Resultado clave:** al enviar el comando `fernetmodulation`, el servidor retornó la secuencia asociada al payload: **`seq: 7, payload: "yo"`**.
 
 ---
 
 ## Bibliografía
 
-**Comunicaciones y Redes de Computadores — William Stallings — 7ed:**
-- Capítulo 3.1: Conceptos y terminología
-- Capítulo 3.2: Transmisión de datos analógicos y digitales
-- Capítulo 3.3: Dificultades en la transmisión
-- Capítulo 3.4: Capacidad del canal
-- Capítulo 4.1: Medios de transmisión guiados
-- Capítulo 4.2: Transmisión inalámbrica
-- Capítulo 4.3: Propagación inalámbrica
-- Capítulo 4.4: Transmisión en la trayectoria visual
-- Capítulo 5.1: Datos digitales, señales digitales
-- Capítulo 5.2: Datos digitales, señales analógicas
-- Capítulo 6.1: Transmisión asincrónica y sincrónica
-- Capítulo 6.5: Configuraciones de línea
+*Comunicaciones y Redes de Computadores — William Stallings, 7.ª edición*
+
+1. Capítulo 3.1 — Conceptos y terminología
+2. Capítulo 3.2 — Transmisión de datos analógicos y digitales
+3. Capítulo 3.3 — Dificultades en la transmisión
+4. Capítulo 3.4 — Capacidad del canal
+5. Capítulo 4.1 — Medios de transmisión guiados
+6. Capítulo 4.2 — Transmisión inalámbrica
+7. Capítulo 4.3 — Propagación inalámbrica
+8. Capítulo 4.4 — Transmisión en la trayectoria visual
+9. Capítulo 5.1 — Datos digitales, señales digitales
+10. Capítulo 5.2 — Datos digitales, señales analógicas
+11. Capítulo 6.1 — Transmisión asincrónica y sincrónica
+12. Capítulo 6.5 — Configuraciones de línea
