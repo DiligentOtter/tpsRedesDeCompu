@@ -4,7 +4,7 @@
 ![alt text](images/image3.png)
 
 # Redes de Computadoras
-## Trabajo Práctico de Teórico N.º 4: Capas de Acceso en Redes Locales, Protocolos y Fundamentos
+## Trabajo Práctico de Teórico N.º 3:Enlace de Datos (2), Red (3) y Transporte (4)
 
 | | |
 |---|---|
@@ -24,6 +24,12 @@
 ---
 
 ## Ítem 1 — Direccionamiento y trama Ethernet
+
+### A) ¿Qué función cumple la capa de enlace dentro del modelo OSI? ¿Qué tipo de comunicación resuelve?
+
+La capa de enlace de datos cumple la función de gestionar el direccionamiento físico y asegurar la transferencia confiable de información a través de un medio directo, como un segmento de red o un enlace punto a punto. Sus tareas principales incluyen el Framing (encapsular los paquetes de la capa de red en tramas agregándoles un encabezado y un tráiler), el direccionamiento físico dentro de la red local mediante direcciones únicas, y el control de acceso al medio para coordinar qué dispositivo transmite en cada momento evitando colisiones. Además, puede detectar o corregir errores mediante secuencias de verificación en la trama y regula el control de flujo para que un emisor rápido no sature al receptor.
+
+Respecto a la comunicación que resuelve, opera de forma directa nodo a nodo dentro de la misma red local (LAN), dejando el enrutamiento entre redes externas a las capas superiores. Estructuralmente, se divide en dos subcapas: la LLC, que sirve de interfaz con la capa de red y maneja el control lógico, y la MAC, encargada de administrar la dirección física de la interfaz de red y el acceso al canal de transmisión.
 
 ### B) MAC vs. IP
 
