@@ -243,7 +243,7 @@ show vlan brief
 show ip interface brief
 ```
 
-![Verificación en sw1](images/l-verificacion.png)
+![Verificación en sw1](images/l-verification-v2.png)
 
 - Con `show vlan brief` se observa que el puerto **Fa0/6**, donde está conectada PC-A, ahora pertenece a la **VLAN 10 (Laboratorio)**. El resto de los puertos, incluido **Fa0/1** (el enlace hacia sw2), siguen perteneciendo a la **VLAN 1**. Las VLANs 20 (Bar) y 99 (Management) están activas, pero no tienen puertos asignados.
 - Con `show ip interface brief` se observa que solo **Fa0/1 y Fa0/6** están activas (**up/up**), porque son las únicas con un dispositivo conectado. Las demás interfaces figuran como **administratively down**, porque las deshabilitamos manualmente en el paso e).
