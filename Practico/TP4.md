@@ -64,6 +64,270 @@ Los cables de consola permiten configurar cada switch desde la terminal de la la
 
 ![Topología en Packet Tracer](images/topologia.png)
 
+### Tabla de direccionamiento
+
+| Dispositivo | Interfaz | Dirección IP | Máscara | Gateway |
+|---|---|---|---|---|
+| sw1 | VLAN 1 | 192.168.1.11 | 255.255.255.0 | N/A |
+| sw2 | VLAN 1 | 192.168.1.12 | 255.255.255.0 | N/A |
+| PC-A | NIC | 192.168.10.3 | 255.255.255.0 | 192.168.10.1 |
+| PC-B | NIC | 192.168.10.4 | 255.255.255.0 | 192.168.10.1 |
+
+Las IP de las PCs se configuraron en **Desktop → IP Configuration**, en modo estático.
+
+## a) Nombre de los switches
+
+Desde la terminal de cada PC se ingresó al switch correspondiente y se le asignó un nombre:
+
+```
+enable
+configure terminal
+hostname sw1
+end
+```
+
+En sw2 se usó `hostname sw2`. Luego del cambio, el prompt pasa de `Switch#` a `sw1#` o `sw2#`.
+
+![Cambio de hostname](images/a-hostname.png)
+
+## b) Contraseñas privilegiada, de consola y vty
+
+```
+configure terminal
+enable secret contrasena_exec_fm
+line console 0
+password contrasena_consola_fm
+login
+exit
+line vty 0 15
+password contrasena_vty_fm
+login
+exit
+```
+
+- **enable secret**: protege el acceso al modo privilegiado (`#`).
+- **line console 0**: protege el acceso por el puerto de consola.
+- **line vty 0 15**: protege el acceso remoto (Telnet/SSH) a través de las 16 líneas virtuales.
+- **login**: indica que se pida la contraseña al ingresar por esa línea.
+
+![Configuración de contraseñas](images/b-contrasenas.png)
+
+## c) Encriptación de contraseñas
+
+```
+service password-encryption
+```
+
+Este comando cifra las contraseñas que están guardadas en texto plano (consola y vty). En `show running-config` pasan a verse como `password 7 ...`. La contraseña de `enable secret` ya se almacena cifrada por defecto (`secret 5 ...`).
+
+![Contraseñas encriptadas](images/c-encriptacion.png)
+
+## d) IP de administración en la VLAN 1
+
+```
+interface vlan 1
+ip address 192.168.1.11 255.255.255.0
+no shutdown
+exit
+```
+
+En sw2 se usó la IP `192.168.1.12`. Un switch de capa 2 no asigna IP a sus puertos físicos: se configura sobre una interfaz virtual (SVI) de una VLAN, y esa IP sirve para administrar el equipo de forma remota. El `no shutdown` es necesario porque la interfaz viene deshabilitada.
+
+![IP de la VLAN 1](images/d-vlan1.png)
+
+## e) Deshabilitar interfaces no utilizadas
+
+Por seguridad, se apagaron todos los puertos que no tienen dispositivos conectados.
+
+En sw1, que usa Fa0/1 y Fa0/6:
+
+```
+interface range fa0/2-5, fa0/7-24, gi0/1-2
+shutdown
+```
+
+En sw2, que usa Fa0/1 y Fa0/18:
+
+```
+interface range fa0/2-17, fa0/19-24, gi0/1-2
+shutdown
+```
+
+![Interfaces deshabilitadas](images/e-shutdown.png)
+
+## f) Guardado de la configuración
+
+```
+write memory
+```
+
+Copia la configuración en ejecución (*running-config*, almacenada en RAM) a la configuración de arranque (*startup-config*, almacenada en NVRAM). Así, los cambios se conservan si el switch se reinicia.
+
+![Guardado de configuración](images/f-write-memory.png)
+
+## g) Prueba de conectividad entre las PCs
+
+Desde PC-A (**Desktop → Command Prompt**):
+
+```
+ping 192.168.10.4
+```
+
+![Ping entre PC-A y PC-B](images/g-ping.png)
+
+El ping es exitoso: ambas PCs están en la misma red (192.168.10.0/24) y todos los puertos de los switches pertenecen a la misma VLAN (VLAN 1), así que forman un único dominio de broadcast.
+
+Es posible que los primeros paquetes se pierdan. Al conectar un equipo, el puerto del switch pasa por los estados de *Spanning Tree* (listening/learning) antes de reenviar tráfico, y además se resuelve ARP. Los siguientes paquetes responden normalmente.
+
+## h) Creación de VLANs
+
+En ambos switches:
+
+```
+configure terminal
+vlan 10
+name Laboratorio
+vlan 20
+name Bar
+vlan 99
+name Management
+end
+```
+
+![Creación de VLANs](images/h-vlans.png)
+
+## i) Lista de VLANs y VLAN por defecto
+
+```
+show vlan brief
+```
+
+![show vlan brief](images/i-show-vlan.png)
+
+La **VLAN por defecto es la VLAN 1** (*default*). De fábrica, todos los puertos del switch pertenecen a ella, y no se puede eliminar ni renombrar. Las VLANs 10, 20 y 99 aparecen creadas, pero todavía sin puertos asignados. Las VLANs 1002 a 1005 vienen reservadas para tecnologías antiguas (FDDI y Token Ring).
+
+## j) Asignación de PC-A a la VLAN Laboratorio
+
+En sw1:
+
+```
+interface f0/6
+switchport mode access
+switchport access vlan 10
+```
+
+El puerto Fa0/6 queda como puerto de acceso de la VLAN 10. Todo el tráfico de PC-A pertenece ahora a esa VLAN.
+
+![Asignación de Fa0/6 a la VLAN 10](images/j-access-vlan10.png)
+
+## k) Traslado de la IP de administración a la VLAN 99
+
+En sw1:
+
+```
+interface vlan 1
+no ip address
+interface vlan 99
+ip address 192.168.1.11 255.255.255.0
+no shutdown
+end
+```
+
+Separar la administración en una VLAN propia (Management) es una buena práctica de seguridad. El tráfico de gestión de los switches queda aislado del tráfico de los usuarios.
+
+![IP en la VLAN 99](images/k-vlan99.png)
+
+## l) Verificación del estado de VLANs e interfaces
+
+En sw1:
+
+```
+show vlan brief
+show ip interface brief
+```
+
+![Verificación en sw1](img/l-verificacion.png)
+
+**Interpretación:**
+
+- Con `show vlan brief` se observa que el puerto **Fa0/6**, donde está conectada PC-A, pertenece ahora a la **VLAN 10 (Laboratorio)**. El resto de los puertos, incluido **Fa0/1** (el enlace hacia sw2), permanecen en la **VLAN 1**. Las VLANs 20 (Bar) y 99 (Management) están activas, pero no tienen puertos asignados.
+- Con `show ip interface brief` se observa que solo **Fa0/1 y Fa0/6** están activas (**up/up**), porque son las únicas con un dispositivo conectado. Las demás interfaces figuran como **administratively down**, porque fueron deshabilitadas manualmente en el inciso e).
+- La interfaz **Vlan1** quedó sin dirección IP (*unassigned*). Aun así sigue **up/up**, porque todavía hay un puerto activo en la VLAN 1 (Fa0/1).
+- La interfaz **Vlan99** tiene la IP **192.168.1.11**, pero su estado es **up/down**. La interfaz está habilitada administrativamente (*Status up*), pero su protocolo está caído: no hay ningún puerto activo que pertenezca a la VLAN 99, así que no tiene por dónde enviar ni recibir tráfico.
+
+## m) Configuración equivalente en sw2
+
+En sw2:
+
+```
+configure terminal
+interface f0/18
+switchport mode access
+switchport access vlan 10
+exit
+interface vlan 1
+no ip address
+interface vlan 99
+ip address 192.168.1.12 255.255.255.0
+no shutdown
+end
+write memory
+show vlan brief
+```
+
+![Configuración de sw2](img/m-sw2.png)
+
+**Interpretación:** la salida de `show vlan brief` muestra que el puerto **Fa0/18**, donde está conectada PC-B, pertenece a la **VLAN 10 (Laboratorio)**. El resto de los puertos, incluido Fa0/1, siguen en la VLAN 1. El mensaje `[OK]` de `write memory` confirma que la configuración se guardó en la NVRAM.
+
+La configuración de sw2 queda simétrica a la de sw1: cada PC está en la VLAN 10, y la IP de administración de cada switch (192.168.1.12 en este caso) está en la VLAN 99. Por lo mismo que en sw1, su interfaz Vlan99 también queda en estado **up/down**.
+
+## n) Verificación de conectividad
+
+Desde PC-A:
+
+```
+ping 192.168.10.4
+```
+
+![Ping PC-A a PC-B](img/n-ping-pcs.png)
+
+Desde la consola de sw1:
+
+```
+ping 192.168.1.12
+```
+
+![Ping sw1 a sw2](img/n-ping-switches.png)
+
+**Interpretación:**
+
+Ambos pings **fallan**:
+
+- **PC-A → PC-B:** los 4 paquetes terminan en *Request timed out* (**100% de pérdida**).
+- **sw1 → sw2:** los 5 intentos muestran `.`, que en Cisco IOS indica que no llegó respuesta (**Success rate 0 percent, 0/5**).
+
+En el inciso g), las mismas PCs sí se comunicaban. Las dos parejas de dispositivos están en la misma VLAN y en la misma red IP (VLAN 10 con 192.168.10.0/24, y VLAN 99 con 192.168.1.0/24), así que la causa está en el enlace entre los switches:
+
+- El enlace **sw1 Fa0/1 ↔ sw2 Fa0/1** sigue configurado como puerto de acceso de la **VLAN 1**, así que solo transporta tráfico de esa VLAN.
+- **PC-A y PC-B** están en la **VLAN 10**. Cada switch solo reenvía las tramas de la VLAN 10 por puertos que pertenecen a esa VLAN, y en cada switch el único es el de la propia PC. El tráfico nunca llega al otro switch.
+- La administración de los switches está en la **VLAN 99**, que no tiene ningún puerto asignado. Por eso **Vlan99** figura como **up/down** en ambos switches y el ping entre ellos no puede salir.
+
+Esto muestra una propiedad fundamental de las VLANs: **segmentan la red en capa 2**. Aunque exista un cable físico entre los switches, dos dispositivos de la misma VLAN solo se comunican si existe un camino que transporte esa VLAN.
+
+### Solución: enlace troncal (802.1Q) — opcional
+
+Para que varias VLANs atraviesen un mismo cable, el enlace entre los switches debe configurarse como **trunk**. En ambos switches:
+
+```
+interface f0/1
+switchport mode trunk
+```
+
+![Pings exitosos con trunk](img/n-trunk.png)
+
+Con el trunk configurado, los dos pings resultan exitosos. El enlace transporta las tramas de todas las VLANs agregándoles una etiqueta (*tag*) IEEE 802.1Q que indica a qué VLAN pertenece cada una. El switch que las recibe usa esa etiqueta para entregarlas en la VLAN correcta. Además, **Vlan99** pasa a estado **up/up**.
+
+Las PCs siguen sin poder comunicarse con los switches, porque están en VLANs y redes IP distintas (192.168.10.0/24 y 192.168.1.0/24). Para comunicarlas haría falta un dispositivo de capa 3, como un router, que funcione como gateway (192.168.10.1).
 ---
 
 ## Bibliografía
