@@ -46,6 +46,26 @@ En el marco de las VLANs y el estándar IEEE 802.1Q, el Tagging es el proceso me
 
 ---
 
+# 2) Implementación de topología con VLANs en Packet Tracer
+
+## Topología
+
+La topología está formada por dos switches Cisco 2960 (sw1 y sw2) y dos laptops (PC-A y PC-B):
+
+| Conexión | Origen | Destino | Tipo de cable |
+|---|---|---|---|
+| PC-A ↔ sw1 | PC-A FastEthernet0 | sw1 Fa0/6 | Directo (Straight-Through) |
+| sw1 ↔ sw2 | sw1 Fa0/1 | sw2 Fa0/1 | Cruzado (Cross-Over) |
+| sw2 ↔ PC-B | sw2 Fa0/18 | PC-B FastEthernet0 | Directo (Straight-Through) |
+| PC-A ↔ sw1 | PC-A RS-232 | sw1 Console | Consola |
+| PC-B ↔ sw2 | PC-B RS-232 | sw2 Console | Consola |
+
+Los cables de consola permiten configurar cada switch desde la terminal de la laptop correspondiente (**Desktop → Terminal**).
+
+![Topología en Packet Tracer](images/topologia.png)
+
+---
+
 ## Bibliografía
 
 *Comunicaciones y Redes de Computadores — William Stallings, 7.ª edición*
