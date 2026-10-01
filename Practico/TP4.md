@@ -308,8 +308,290 @@ En la parte g), las PCs sí se comunicaban. Los dos pares de dispositivos están
 
 Esto muestra una propiedad fundamental de las VLANs **segmentan la red en capa 2**. Aunque exista un cable físico entre los switches, dos dispositivos de la misma VLAN solo se comunican si existe un camino que transporte esa VLAN.
 
----
 
+
+---
+# 3) Red LAN a bordo de una aeronave (VLAN, NAT y ACL)
+
+Para este punto armamos en Packet Tracer la red de un avión. La idea es dividir a los usuarios en tres grupos con permisos distintos, usando VLANs para separarlos, NAT para la salida a Internet y ACL para controlar quién puede llegar adónde:
+
+- **Turista (VLAN 10):** solo puede acceder al servidor de entretenimiento.
+- **Business (VLAN 20):** accede al servidor y a Internet.
+- **Administración (VLAN 99):** acceso total.
+
+## Topología
+
+La red tiene un router (R-Aircraft, un Cisco 2811), un switch 2960, otro router 2811 que hace de ISP, dos PCs Turista, dos PCs Business, una PC Admin y un servidor. Como fondo usamos un dibujo de un avión y pintamos cada zona con su clase (rojo: Turista, verde: Business, violeta: Admin).
+
+![Diagrama de red](images/3-diagrama.png)
+
+| Conexión | Origen | Destino | Cable |
+|---|---|---|---|
+| Router ↔ Switch | R-Aircraft Fa0/0 | SW Fa0/1 | Directo |
+| Router ↔ ISP | R-Aircraft Fa0/1 | ISP Fa0/0 | Cruzado |
+| Turistas ↔ Switch | PCs Turista Fa0 | SW Fa0/2 y Fa0/3 | Directo |
+| Business ↔ Switch | PCs Business Fa0 | SW Fa0/4 y Fa0/5 | Directo |
+| Admin ↔ Switch | PC Admin Fa0 | SW Fa0/6 | Directo |
+| Servidor ↔ Switch | Servidor Fa0 | SW Fa0/7 | Directo |
+
+### Direccionamiento
+
+| VLAN | Nombre | Red IP | Gateway | Acceso |
+|---|---|---|---|---|
+| 10 | Turista | 10.10.10.0/24 | 10.10.10.1 | Solo servidor |
+| 20 | Business | 10.10.20.0/24 | 10.10.20.1 | Servidor + Internet |
+| 99 | Administración | 10.10.99.0/24 | 10.10.99.1 | Acceso total |
+| — | Enlace ISP | 200.0.0.0/30 | 200.0.0.1 (R-Aircraft) y 200.0.0.2 (ISP) | — |
+
+El servidor está en la VLAN 99 con IP fija `10.10.99.10/24` y gateway `10.10.99.1`. Las PCs toman su IP por DHCP del router, que tiene un pool por cada VLAN. Para simular Internet, al router ISP le pusimos una interfaz *loopback* con la IP `8.8.8.8`, que contesta los pings.
+
+## Configuración del switch (SW)
+
+Creamos las tres VLANs, dejamos el puerto hacia el router como troncal y asignamos cada puerto a la VLAN de su clase:
+
+```
+enable
+configure terminal
+
+vlan 10
+ name Turista
+vlan 20
+ name Business
+vlan 99
+ name Admin
+
+interface FastEthernet0/1
+ switchport mode trunk
+
+interface range FastEthernet0/2 - 3
+ switchport mode access
+ switchport access vlan 10
+
+interface range FastEthernet0/4 - 5
+ switchport mode access
+ switchport access vlan 20
+
+interface FastEthernet0/6
+ switchport mode access
+ switchport access vlan 99
+
+interface FastEthernet0/7
+ switchport mode access
+ switchport access vlan 99
+end
+write memory
+```
+
+Para verificarlo usamos `show vlan brief`:
+
+![show vlan brief en el switch](images/3-switch-vlan.png)
+
+Ahí se ven las VLANs 10, 20 y 99 activas, con Fa0/2-3 en la 10, Fa0/4-5 en la 20 y Fa0/6-7 en la 99. Fa0/1 no figura en ninguna porque es troncal y lleva todas las VLANs etiquetadas con 802.1Q. Los puertos que no usamos quedan en la VLAN 1.
+
+## Configuración del router (R-Aircraft)
+
+### Subinterfaces
+
+El router tiene un solo cable hacia el switch (Fa0/0), así que creamos una subinterfaz por cada VLAN con encapsulación 802.1Q. Cada una hace de gateway de su red y es la que permite que las VLANs se comuniquen entre sí (esto se conoce como *router-on-a-stick*):
+
+```
+interface FastEthernet0/0
+ no shutdown
+
+interface FastEthernet0/0.10
+ encapsulation dot1Q 10
+ ip address 10.10.10.1 255.255.255.0
+
+interface FastEthernet0/0.20
+ encapsulation dot1Q 20
+ ip address 10.10.20.1 255.255.255.0
+
+interface FastEthernet0/0.99
+ encapsulation dot1Q 99
+ ip address 10.10.99.1 255.255.255.0
+
+interface FastEthernet0/1
+ ip address 200.0.0.1 255.255.255.252
+ no shutdown
+```
+
+### DHCP
+
+Un pool por clase. Excluimos las primeras 10 direcciones de cada red para que queden libres para el gateway y para equipos con IP fija, como el servidor:
+
+```
+ip dhcp excluded-address 10.10.10.1 10.10.10.10
+ip dhcp excluded-address 10.10.20.1 10.10.20.10
+ip dhcp excluded-address 10.10.99.1 10.10.99.10
+
+ip dhcp pool Turista
+ network 10.10.10.0 255.255.255.0
+ default-router 10.10.10.1
+ dns-server 10.10.100.10
+
+ip dhcp pool Business
+ network 10.10.20.0 255.255.255.0
+ default-router 10.10.20.1
+ dns-server 8.8.8.8
+
+ip dhcp pool Admin
+ network 10.10.99.0 255.255.255.0
+ default-router 10.10.99.1
+ dns-server 8.8.8.8
+```
+
+### NAT y ruta por defecto
+
+Con NAT con sobrecarga (PAT) las IPs privadas de Business y Admin salen a Internet con la IP de la interfaz hacia el ISP (`200.0.0.1`). Turista no tiene NAT, porque no debe salir a Internet. La ruta por defecto manda todo lo que el router no conoce hacia el ISP:
+
+```
+access-list 20 permit 10.10.20.0 0.0.0.255
+access-list 20 permit 10.10.99.0 0.0.0.255
+ip nat inside source list 20 interface FastEthernet0/1 overload
+
+interface FastEthernet0/0.20
+ ip nat inside
+interface FastEthernet0/0.99
+ ip nat inside
+interface FastEthernet0/1
+ ip nat outside
+
+ip route 0.0.0.0 0.0.0.0 200.0.0.2
+```
+
+Con `show ip route` comprobamos que están las cuatro redes conectadas (`C`) y la ruta por defecto (`S*`) hacia el ISP:
+
+```
+Gateway of last resort is 200.0.0.2 to network 0.0.0.0
+
+     10.0.0.0/8 is variably subnetted, 6 subnets, 2 masks
+C       10.10.10.0/24 is directly connected, FastEthernet0/0.10
+L       10.10.10.1/32 is directly connected, FastEthernet0/0.10
+C       10.10.20.0/24 is directly connected, FastEthernet0/0.20
+L       10.10.20.1/32 is directly connected, FastEthernet0/0.20
+C       10.10.99.0/24 is directly connected, FastEthernet0/0.99
+L       10.10.99.1/32 is directly connected, FastEthernet0/0.99
+     200.0.0.0/24 is variably subnetted, 2 subnets, 2 masks
+C       200.0.0.0/30 is directly connected, FastEthernet0/1
+L       200.0.0.1/32 is directly connected, FastEthernet0/1
+S*   0.0.0.0/0 [1/0] via 200.0.0.2
+```
+
+### ACL
+
+Para los permisos de cada clase hicimos dos ACL extendidas con nombre y las aplicamos **de entrada** (`in`) en la subinterfaz de cada VLAN. De esa forma el tráfico se filtra apenas sale de la PC, antes de ser ruteado:
+
+```
+ip access-list extended TURISTA_IN
+ permit udp any eq 68 any eq 67
+ permit ip 10.10.10.0 0.0.0.255 host 10.10.99.10
+ permit icmp 10.10.10.0 0.0.0.255 10.10.99.0 0.0.0.255 echo-reply
+ permit tcp 10.10.10.0 0.0.0.255 10.10.99.0 0.0.0.255 established
+
+ip access-list extended BUSINESS_IN
+ permit udp any eq 68 any eq 67
+ permit ip 10.10.20.0 0.0.0.255 host 10.10.99.10
+ permit icmp 10.10.20.0 0.0.0.255 10.10.99.0 0.0.0.255 echo-reply
+ permit tcp 10.10.20.0 0.0.0.255 10.10.99.0 0.0.0.255 established
+ deny ip 10.10.20.0 0.0.0.255 10.10.0.0 0.0.255.255
+ permit ip 10.10.20.0 0.0.0.255 any
+
+interface FastEthernet0/0.10
+ ip access-group TURISTA_IN in
+interface FastEthernet0/0.20
+ ip access-group BUSINESS_IN in
+```
+
+Qué hace cada una:
+
+- **TURISTA_IN** deja pasar solo el DHCP, el tráfico hacia el servidor (`10.10.99.10`) y las respuestas hacia la VLAN 99. Todo lo demás se descarta por el `deny ip any any` implícito que tienen todas las ACL al final.
+- **BUSINESS_IN** deja pasar lo mismo, bloquea el resto de la red `10.10.0.0/16` (o sea, Turista y Admin) y permite todo lo demás, que en la práctica es Internet.
+- Las ACL **no guardan el estado de las conexiones**. Por eso, para que Admin pueda hacer ping a Turista o Business y que la respuesta vuelva, hay que permitir esas respuestas de forma explícita (`echo-reply` y `established` hacia `10.10.99.0/24`).
+- El **orden** de las reglas importa, porque se aplica la primera que coincide. En `BUSINESS_IN` el `deny` a `10.10.0.0/16` va después del `permit` al servidor y antes del `permit ... any`. Si estuviera antes, Business no podría llegar al servidor.
+- **Diferencia con la ayuda del enunciado:** la ayuda usaba una sola ACL numerada (`access-list 100 deny ip 10.10.10.0 ... any`) aplicada de salida (`out`) en `Fa0/0.10`. Eso filtra lo que sale *hacia* Turista, no lo que Turista manda, y tampoco contempla el caso de Business. Por eso usamos ACL de entrada, una por clase, que cumplen los tres perfiles pedidos.
+
+Verificamos con `show access-lists` y `show ip interface`:
+
+![ACL, NAT y estado de Fa0/0.10](images/3-router-acl-nat.png)
+
+![Fa0/0.20 con la ACL BUSINESS_IN aplicada](images/3-router-acl-vlan20.png)
+
+- En `show access-lists` aparecen las dos ACL con sus reglas y los contadores de coincidencias. La regla `deny` de `BUSINESS_IN` tiene **4 matches**, que son los 4 pings que Business mandó a Admin.
+- `show ip interface` en `Fa0/0.10` dice `Inbound access list is TURISTA_IN`, y en `Fa0/0.20` dice `Inbound access list is BUSINESS_IN`. O sea que las dos ACL quedaron aplicadas.
+- `show ip nat translations` (arriba en la primera captura) muestra los pings de Business (`10.10.20.12`) a `8.8.8.8` traducidos a `200.0.0.1`. Así se confirma que el NAT funciona.
+
+### Servidor de entretenimiento
+
+Usamos el servicio HTTP que ya trae el servidor de Packet Tracer y cambiamos el `index.html`:
+
+```html
+<html>
+  <h1> AirConnect Entertainment</h1>
+  <p>Bienvenido a bordo. Disfrute nuestras películas y música.</p>
+</html>
+```
+
+## Pruebas
+
+### Turista
+
+![Pings desde PC Turista](images/3-turista-pings.png)
+
+![Navegador web desde PC Turista](images/3-turista-web.png)
+
+- **Ping al servidor (10.10.99.10):** responde, 4 de 4 (TTL=127, porque pasa por el router).
+- **HTTP a `http://10.10.99.10`:** carga la página de *AirConnect Entertainment*.
+- **Ping a una PC Business (10.10.20.11) y a Internet (8.8.8.8):** fallan con `Destination host unreachable`. La respuesta viene de `10.10.10.1`, que es el router: la ACL `TURISTA_IN` descartó los paquetes y el router avisó del error con un mensaje ICMP.
+
+### Business
+
+![Pings desde PC Business](images/3-business-pings.png)
+
+![Navegador web desde PC Business](images/3-business-web.png)
+
+- **Ping al servidor (10.10.99.10):** responde, 4 de 4 (TTL=127).
+- **HTTP a `http://10.10.99.10`:** carga la página.
+- **Ping a Internet (8.8.8.8):** responde, 4 de 4 (TTL=254). Sale por NAT con la IP `200.0.0.1`.
+- **Ping a Admin (10.10.99.11):** falla con `Destination host unreachable` desde `10.10.20.1`, por la regla `deny` de `BUSINESS_IN`. Con `ipconfig` en la PC Admin confirmamos que `10.10.99.11` es su IP real.
+
+### Administración
+
+![Pings desde PC Admin (Internet y servidor)](images/3-admin-pings1.png)
+
+![Pings desde PC Admin (Turista y Business)](images/3-admin-pings2.png)
+
+IP de la PC Admin (por DHCP):
+
+```
+IPv4 Address....................: 10.10.99.11
+Subnet Mask.....................: 255.255.255.0
+Default Gateway.................: 10.10.99.1
+```
+
+- **Ping a Internet (8.8.8.8):** responde (TTL=254).
+- **Ping al servidor (10.10.99.10):** responde (TTL=128). Está en la misma VLAN, así que no pasa por el router.
+- **Ping a una PC Turista (10.10.10.11) y a una Business (10.10.20.11):** responden (TTL=127). La respuesta puede volver porque las dos ACL dejan pasar el `echo-reply` hacia la VLAN 99.
+
+### Resumen
+
+| Prueba | Desde | Hacia | Esperado | Obtenido |
+|---|---|---|---|---|
+| Ping al servidor | PC Turista | 10.10.99.10 | ✅ Responde | ✅ Responde |
+| HTTP | PC Turista | http://10.10.99.10 | ✅ Carga la página | ✅ Carga la página |
+| Ping a Internet | PC Turista | 8.8.8.8 | ❌ Bloqueado | ❌ Bloqueado |
+| Ping a Business | PC Turista | 10.10.20.11 | ❌ Bloqueado | ❌ Bloqueado |
+| HTTP | PC Business | http://10.10.99.10 | ✅ Carga | ✅ Carga |
+| Ping a Internet | PC Business | 8.8.8.8 | ✅ Funciona | ✅ Funciona |
+| Ping a Admin | PC Business | 10.10.99.11 | ❌ Bloqueado | ❌ Bloqueado |
+| Ping a todos | PC Admin | Servidor, Turista, Business, Internet | ✅ Todos | ✅ Todos |
+
+## Conclusiones
+
+- Las **VLANs** nos permitieron separar tres tipos de usuarios aunque usan el mismo switch físico. El puerto Fa0/1, configurado como troncal 802.1Q, lleva las tres VLANs al router por un solo cable.
+- Como cada VLAN es una red IP distinta, para comunicarse entre sí siempre tienen que pasar por el router. Eso nos sirvió para concentrar las reglas de seguridad en un solo lugar: las **ACL** de las subinterfaces.
+- Las ACL son **sin estado** y se leen en orden, con un `deny` implícito al final. Por eso tuvimos que permitir explícitamente las respuestas (`echo-reply`, `established`) para que Admin pudiera iniciar conexiones hacia las otras VLANs.
+- El **NAT con sobrecarga (PAT)** deja que varias PCs con IP privada salgan a Internet compartiendo la IP pública `200.0.0.1`, diferenciadas por el puerto. Lo aplicamos a Business y Admin. Turista no sale a Internet porque no tiene NAT y su ACL tampoco se lo permite.
+- Todas las pruebas dieron lo que pedía el enunciado.
 ## Bibliografía
 
 *Comunicaciones y Redes de Computadores — William Stallings, 7.ª edición*
