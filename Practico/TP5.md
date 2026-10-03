@@ -59,3 +59,56 @@ La informacion que compone la estructura minima de un mensaje Echo consta de los
 - `identifier` (Identificador - 2 bytes): un valor numerico que sirve para identificar la sesion o el proceso del sistema operativo que envio el ping.
 - `sequence number` (Numero de Secuencia - 2 bytes): un numero que se incrementa secuencialmente con cada peticion enviada por la aplicacion.
 - `data` (Datos opcionales - Longitud variable): un bloque de datos opcional enviado por la aplicacion.
+
+### Configuracion de red del equipo:
+
+![alt text](images/ipconfig.png)
+
+### Seleccionar un Echo Request y desplegar el panel de detalles (el del medio). Identificar las capas que muestra Wireshark y completar una tabla:
+
+|Capa|Dir Origen|Dir Destino|Campo|
+|----|----------|-----------|-----|
+|Ethernet II|Intel_9a:03:ad (34:f6:4b:9a:03:ad)|HuaweiTechno_9a:3d:fd (c0:e1:be:9a:3d:fd)|Type: IPv4 (0x0800)|
+|Internet Protocol Version 4|192.168.100.29|8.8.8.8|Protocol: ICMP (1)|
+|Internet Control Message Protocol|No aplica|No aplica|No aplica|
+|Datos/Payload|No aplica|No aplica|No aplica (32 bytes de Datos)|
+
+![alt text](images/encabezadosLab5.jpg)
+
+### Respuestas
+**[A]** La **MAC** destino del Echo Request a 8.8.8.8 es (`c0:e1:be:9a:3d:fd`), no es la MAC de 8.8.8.8, es la de mi router (Huawei). La mmisma MAC aparece como destino en el ping al gateway.
+Una direccion **MAC** solo tiene alcance dentro de la red local. Si el destino esta fuera de la LAN, el host envia la trama al router y este la reenvia generando un nuevo encabezado Ethernet en cada salto. La direccion IP, en cambio, identifica el equipo final de punta a punta y se mantiene durante todo el recorrido.
+
+**[B]** Echo Request vs Echo Reply:
+
+|Capa|Cambios|Se Mantienen|
+|----|-------|------------|
+|Ethernet|MAC de origen y destino se intercambian. Type `0x0800` en request y `0x8100` en el relpy|-|
+|IPv4|IP de origen y destino se intercambian|V4, largo de cabecera (20 B), largo total (60 B), flags, fragmentacion, Protocol (1)|
+|ICMP|En request `type = 8`; `checksum = 0x4d46`, en reply `type = 0`; `checksum = 0x5546`. |Code (0), indentifier (0x0001), Sequence Number (21), Data (32 bytes)|
+
+**[C]** El Payload del **Ping** esta dentro del mensaje ICMP, a continuacion de los 8 bytes de cabecera, tiene un tamaño de 32 bytes y contiene caracteres ASCII.
+En el Reply es identico porque Echo Reply devuelve devuelve los mismos datos recibidos.
+El Ping de Windows envia 32 bytes con este patron alfabetico y el ping de Linux envia normalmente 56 bytes de datos.
+
+**[D]** Valor del TTL:
+
+|Mensaje|TTL|
+|-------|---|
+|Echo Request enviado (a 8.8.8.8 y gateway)|128|
+|Echo Reply del gateway|64|
+|Echo Reply de 8.8.8.8|119|
+
+No son iguales por que cada equipo asigna su propio TTL inicial al crear un paquete. El Reply lo genera el destino, no mi equipo. Cada router que atravieza el paquete le resta 1 al TTL.
+El Reply del gateway llega con 64 por que no cruzo routers intermedios. El de 8.8.8.8 llega con 119, suponiendo un TTL inicial de 128, el paquete abria atravezado unos 9 routes en camino de vuelta (es una estimacion ya que se desconoce el TTL inicial real del servidor).
+
+**[E]** Encapsulacion:
+```mermaid
+%%{init: {"themeVariables": {"fontSize": "20px"}}}%%
+block-beta
+  columns 37
+  trama["Trama Ethernet II - 74 B"]:37
+  eth["Cabecera Ethernet - 14 B"]:7 ip["Paquete IPv4 - 60 B"]:30
+  space:7 iph["Cabecera IPv4 - 20 B"]:10 icmp["Mensaje ICMP - 40 B"]:20
+  space:17 ich["ICMP - 8 B"]:4 data["Data (payload) - 32 B"]:16
+```
