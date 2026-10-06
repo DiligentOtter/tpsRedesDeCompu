@@ -112,3 +112,23 @@ block-beta
   space:7 iph["Cabecera IPv4 - 20 B"]:10 icmp["Mensaje ICMP - 40 B"]:20
   space:17 ich["ICMP - 8 B"]:4 data["Data (payload) - 32 B"]:16
 ```
+
+### 2) ARP: de una IP a una direccion MAC
+
+  a) *Adress Resolution Protocol / Protocolo de Resolucion de direcciones* es el mecanismo encargado de traducir una IP loca a una direccion fisica de elace de datos dentro de una misma red local. Basicamente es la capa que se encarga de permitir que un paquete de un emisor que desconoce la direccion fisica dentro de la lan, pueda llegar al receptor
+  
+  b) Un ARP request es un mensaje broadcast que se envia por la red local a todos  los conectados preguntado por la propiedad de una direccion IP especifica, de forma tal que aquel que la posea envie un mensaje de respuesta asi el emisor conoce al receptor en un handshake. Por otro lado un ARP Reply, es la respuesta al request donde la maquina propietaria de la direccion IP x, responde al emisor con un mensaje unicast, indicando su direccion MAC
+
+  c) La tabla cache ARP es una tabla que va almacenando las direcciones MAC de cada asociacion encontrada en memoria ram. De esta forma nos evitamos saturar la red con constantes mensajes de broadcast y dotamos de memoria al sistema. Puede ser una tabla hash.
+
+  d) Entonces el procedimiento de de busqueda de **MAC** en la red **LAN** se sucede asi:
+
+    - Se revisa la cache ARP en busqueda de una asociacion existente, si exite envio el paquete
+    - Si no existe, se envia un ARP request por la red en forma broadcast en busca del propietario de esa IP
+    - Se espera el ARP reply del propietario
+    - Una vez recibido el ARP se almacena la direccion MAC en cache y se envia el paquete Ethernet
+
+
+
+
+
