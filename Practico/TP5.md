@@ -112,3 +112,29 @@ block-beta
   space:7 iph["Cabecera IPv4 - 20 B"]:10 icmp["Mensaje ICMP - 40 B"]:20
   space:17 ich["ICMP - 8 B"]:4 data["Data (payload) - 32 B"]:16
 ```
+
+## Item 2: ARP: de una IP a una dirección MAC.
+
+### A) ¿Qué problema resuelve ARP? ¿En qué capa lo ubicarían y por qué es discutible?
+
+El problema que resuelve el protocolo ARP (Address Resolution Protocol) es el de la traducción de direcciones, permitiendo que un dispositivo identifique la dirección física (MAC de capa 2) de otro dispositivo en la misma red local si conoce su dirección IP (capa 3). Es necesario ya que las tarjetas de interfaz de red (NIC) se comunican a nivel de enlace de datos usando las direcciones MAC, mientras que los protocolos de red, como IP, operan con direcciones lógicas.
+
+Generalmente se ubica entre la capa 2 y la 3 del modelo OSI. Su presencia es discutible porque funciona debajo de IP para permitir que los paquetes de IP sean transportados en tramas de enlace de datos, lo que lo hace cercano a la capa 2. Pero también opera directamente sobre la capa 3 (IPv4) y es parte integral de la suite TCP/IP para la conectividad de red, lo que hace que muchos lo identifiquen como capa 3.
+
+### B) ¿Qué es un ARP Request y un ARP Reply? ¿A quién se envía cada uno? 
+
+Un ARP Request es un mensaje de difusión donde una computadora pregunta a toda la red local:"¿Quién tiene esta dirección IP?".Se envía a una dirección de broadcast de capa 2 (ff:ff:ff:ff:ff:ff), lo que significa que llega a todos los dispositivos de la LAN.
+
+Un ARP Reply es el mensaje de respuesta que emite el equipo que reconoce ser el propietario de la IP consultada, informando su propia dirección MAC al equipo que hizo la pregunta. Se envía exclusivamente a la dirección MAC del equipo que originó la solicitud original.
+
+
+### C) ¿Qué es la caché ARP y por qué existe? 
+
+La caché ARP es una tabla temporal almacenada en la memoria del sistema operativo de la computadora donde se guardan las asociaciones recientemente descubiertas entre direcciones IP y direcciones MAC. Existe por razones de rendimiento y eficiencia en la red. Si la computadora tuviera que enviar un ARP Request cada vez que necesitara comunicarse con el mismo equipo, se generaría una gran cantidad de tráfico innecesario en la red local y se retrasaría la comunicación. La caché permite reutilizar la información ya obtenida de forma instantánea.
+
+### D) Traten de responder con sus palabras: "Tengo la IP de una máquina de mi red local. ¿Cómo sé a qué dirección MAC debo enviarle la trama?" 
+
+Primero voy a consultar en mi caché ARP local para saber si ya guardé a qué MAC corresponde la IP en una comunicación anterior. Si ya está en la caché, armo la trama con esa MAC. Si no la tengo en caché, genero un ARP request solicitando a la red local quién es el dispositivo que tiene esa IP, el dispositivo que tiene esa IP me va a responder indicando su MAC. Luego voy a guardar ese dato en la caché de ARP para poder encapsular y enviar la trama definitiva.
+
+
+
