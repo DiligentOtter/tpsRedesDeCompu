@@ -136,5 +136,117 @@ La caché ARP es una tabla temporal almacenada en la memoria del sistema operati
 
 Primero voy a consultar en mi caché ARP local para saber si ya guardé a qué MAC corresponde la IP en una comunicación anterior. Si ya está en la caché, armo la trama con esa MAC. Si no la tengo en caché, genero un ARP request solicitando a la red local quién es el dispositivo que tiene esa IP, el dispositivo que tiene esa IP me va a responder indicando su MAC. Luego voy a guardar ese dato en la caché de ARP para poder encapsular y enviar la trama definitiva.
 
+## Item 3: TCP y UDP "a mano" con ncat
 
+### A) ¿Qué significa "establecer una conexión"? ¿Dónde existe una conexión TCP?
 
+Establecer una conexión es que los dos extremos se pongan de acuerdo antes de enviar datos. Lo hacen con el **three-way handshake** (`SYN` → `SYN/ACK` → `ACK`), en el que intercambian números de secuencia iniciales y reservan recursos (buffers, timers, variables de estado). La conexión existe solo en los extremos, como estado dentro del sistema operativo de cada host. No existe en los cables ni en los routers: estos solo reenvían paquetes IP y no saben que pertenecen a una conexión TCP.
+
+### B) ¿Qué es un puerto? ¿Qué identifica el par (IP, puerto)?
+
+Un **puerto** es un número de 16 bits (0–65535) que sirve para multiplexar: permite que varios procesos de un mismo host usen la red a la vez. La IP identifica al host y el puerto identifica al proceso o servicio dentro de él. El par (IP, puerto) identifica un extremo de comunicación (un **socket**). Una conexión TCP se identifica por la 4-upla (IP origen, puerto origen, IP destino, puerto destino).
+
+### C) ¿Qué significa que un proceso esté "escuchando" en un puerto?
+
+El proceso le pidió al SO (con `bind` y `listen`) que reserve ese puerto y le entregue las conexiones o datagramas que lleguen a él. En TCP, el SO responde con `SYN/ACK` a los `SYN` que llegan a ese puerto. Si nadie escucha, el SO rechaza el intento.
+
+### Práctico TCP
+
+**Captura Wireshark:**
+
+![alt text](image-1.png)
+
+**Terminales:**
+
+![alt text](image-2.png)
+
+![alt text](image-3.png)
+
+**Datos de la captura:**
+
+```
+tshark -r TCP.pcapng 
+    1 0.000000000     127.0.0.1 → 127.0.0.1    TCP 74 49584 → 12000 [SYN] Seq=0 Win=65495 Len=0 MSS=65495 SACK_PERM TSval=2252105845 TSecr=0 WS=1024
+    2 0.000017082 0.000017082    127.0.0.1 → 127.0.0.1    TCP 74 12000 → 49584 [SYN, ACK] Seq=0 Ack=1 Win=65483 Len=0 MSS=65495 SACK_PERM TSval=3379146092 TSecr=2252105845 WS=1024
+    3 0.000027411 0.000010329    127.0.0.1 → 127.0.0.1    TCP 66 49584 → 12000 [ACK] Seq=1 Ack=1 Win=65536 Len=0 TSval=2252105845 TSecr=3379146092
+    4 10.853392106 10.853364695    127.0.0.1 → 127.0.0.1    TCP 73 12000 → 49584 [PSH, ACK] Seq=1 Ack=1 Win=65536 Len=7 TSval=3379156946 TSecr=2252105845
+    5 10.853405141 0.000013035    127.0.0.1 → 127.0.0.1    TCP 66 49584 → 12000 [ACK] Seq=1 Ack=8 Win=65536 Len=0 TSval=2252116699 TSecr=3379156946
+    6 20.244424612 9.391019471    127.0.0.1 → 127.0.0.1    TCP 84 49584 → 12000 [PSH, ACK] Seq=1 Ack=8 Win=65536 Len=18 TSval=2252126090 TSecr=3379156946
+    7 20.244437617 0.000013005    127.0.0.1 → 127.0.0.1    TCP 66 12000 → 49584 [ACK] Seq=8 Ack=19 Win=65536 Len=0 TSval=3379166337 TSecr=2252126090
+```
+
+### Práctico UDP
+
+**Captura Wireshark:**
+
+![alt text](image-4.png)
+
+**Terminales:**
+
+![alt text](image-5.png)
+
+![alt text](image-6.png)
+
+**Datos de la captura:**
+
+```
+    1 0.000000000     127.0.0.1 → 127.0.0.1    TCP 66 58576 → 63342 [ACK] Seq=1 Ack=1 Win=64 Len=0 TSval=499136540 TSecr=3479431858
+    2 0.000003126 0.000003126    127.0.0.1 → 127.0.0.1    TCP 66 58550 → 63342 [ACK] Seq=1 Ack=1 Win=1631 Len=0 TSval=1744292546 TSecr=3360742043
+    3 0.000009528 0.000006402    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58576 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3479476913 TSecr=499120156
+    4 0.000009899 0.000000371    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58550 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3360787098 TSecr=1744272066
+    5 0.000017884 0.000007985    127.0.0.1 → 127.0.0.1    TCP 66 58560 → 63342 [ACK] Seq=1 Ack=1 Win=78 Len=0 TSval=858076343 TSecr=1962185907
+    6 0.000022803 0.000004919    127.0.0.1 → 127.0.0.1    TCP 66 58566 → 63342 [ACK] Seq=1 Ack=1 Win=64 Len=0 TSval=2554351675 TSecr=3516550886
+    7 0.000025939 0.000003136    127.0.0.1 → 127.0.0.1    TCP 66 58574 → 63342 [ACK] Seq=1 Ack=1 Win=64 Len=0 TSval=2565093131 TSecr=3571448562
+    8 0.000029055 0.000003116    127.0.0.1 → 127.0.0.1    TCP 66 58556 → 63342 [ACK] Seq=1 Ack=1 Win=85 Len=0 TSval=304859526 TSecr=2695841910
+    9 0.000033523 0.000004468    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58560 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=1962230962 TSecr=858059959
+   10 0.000035487 0.000001964    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58566 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3516595941 TSecr=2554335291
+   11 0.000036919 0.000001432    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58574 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3571493617 TSecr=2565076747
+   12 0.000039003 0.000002084    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58556 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=2695886965 TSecr=304839046
+   13 14.145426023 14.145387020    127.0.0.1 → 127.0.0.1    LLC 65 I P, N(R)=48, N(S)=54; DSAP 0x68 Individual, SSAP 0x6e Response
+   14 22.647209429 8.501783406    127.0.0.1 → 127.0.0.1    LLC 66 I P, N(R)=48, N(S)=54; DSAP 0x68 Individual, SSAP 0x6e Response
+```
+
+### Respuestas
+
+### A) ¿Qué pasó en la red cuando ejecutaron el comando del cliente, antes de escribir el primer mensaje? Compárenlo con TCP.
+
+En **UDP** no pasó nada en la red. `ncat -u` solo crea el socket y guarda el destino (`127.0.0.1:12001`). El "Connected to..." es solo un mensaje de ncat, no hay conexión real. En **TCP**, en cambio, al ejecutar el cliente aparece enseguida el handshake: `[SYN]`, `[SYN, ACK]` y `[ACK]`, sin haber escrito nada. Esa diferencia existe porque TCP necesita establecer una conexión con estado en ambos extremos antes de enviar datos, y UDP no.
+
+### B) ¿Cuántos datagramas generó cada mensaje? ¿Hay algo parecido a un ACK?
+
+Cada mensaje generó un datagrama, y no hay nada parecido a un ACK. El emisor no sabe si el mensaje llegó. Si el servidor responde, esa respuesta es otro datagrama independiente con contenido propio, no una confirmación. En **TCP**, cada segmento con datos recibe un `[ACK]`.
+
+### C) Comparen el encabezado UDP con el encabezado TCP de un segmento con datos: ¿qué campos tiene cada uno? ¿Cuántos bytes ocupa cada encabezado?
+
+- **UDP:** 8 bytes fijos. Campos: puerto origen, puerto destino, longitud y checksum.
+- **TCP:** 20 bytes como mínimo, más opciones. Campos: puerto origen, puerto destino, número de secuencia, número de ACK, data offset (longitud del encabezado), flags (`SYN`, `ACK`, `FIN`, `PSH`, `RST`), ventana, checksum, puntero urgente y opciones.
+
+### D) ¿Qué pasó en la red al cerrar el cliente con Ctrl+C? ¿Y en TCP?
+
+- **UDP:** no pasó nada. No hay conexión que cerrar, así que no se genera ningún paquete y el servidor no detecta que el cliente se fue.
+- **TCP:** se produce un cierre ordenado con `FIN`. En la captura del cierre de la conexión se observa: paquete 1 `[FIN, ACK]`, paquete 2 `[FIN, ACK]` en sentido contrario y paquete 3 `[ACK]` (3 segmentos, porque un `ACK` viajó junto con un `FIN`).
+
+### E) Para enviar la misma frase, ¿cuántos paquetes necesitaron en total con TCP y cuántos con UDP? ¿Qué "compran" con los paquetes extra de TCP?
+
+- **UDP:** 1 paquete.
+- **TCP:** unos 9 en total: 3 de handshake, 2 de la frase (el segmento de datos y su ACK) y 4 de cierre (o 3 si el ACK se combina con un FIN).
+
+Los paquetes extra de TCP permiten:
+
+- Entrega confirmada y retransmisión si algo se pierde.
+- Orden garantizado y detección de duplicados.
+- Control de flujo y de congestión.
+- Conocimiento mutuo de que el otro extremo existe y está listo.
+
+### F) ¿Y si nadie escucha?
+
+- **TCP a un puerto cerrado:** el cliente envía un `[SYN]` y el SO responde de inmediato con `[RST, ACK]`. No se completa el handshake y ncat muestra "Connection refused".
+- **UDP a un puerto cerrado:** el cliente envía el datagrama (al escribir y presionar Enter) y el SO responde con un **ICMP Destination Unreachable, Type 3 Code 3 (Port Unreachable)**. UDP no tiene mecanismo propio de error, por lo que el aviso llega por ICMP.
+
+**Con TCP:**
+
+![alt text](image-7.png)
+
+**Con UDP:**
+
+![alt text](image-8.png)
