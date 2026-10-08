@@ -154,13 +154,13 @@ El proceso le pidió al SO (con `bind` y `listen`) que reserve ese puerto y le e
 
 **Captura Wireshark:**
 
-![alt text](image-1.png)
+![alt text](./images/image-1.png)
 
 **Terminales:**
 
-![alt text](image-2.png)
+![alt text](./images/image-2.png)
 
-![alt text](image-3.png)
+![alt text](./images/image-3.png)
 
 **Datos de la captura:**
 
@@ -179,13 +179,13 @@ tshark -r TCP.pcapng
 
 **Captura Wireshark:**
 
-![alt text](image-4.png)
+![alt text](./images/image-4.png)
 
 **Terminales:**
 
-![alt text](image-5.png)
+![alt text](./images/image-5.png)
 
-![alt text](image-6.png)
+![alt text](./images/image-6.png)
 
 **Datos de la captura:**
 
@@ -245,8 +245,8 @@ Los paquetes extra de TCP permiten:
 
 **Con TCP:**
 
-![alt text](image-7.png)
+![alt text](./images/image-7.png)
 
 **Con UDP:**
 
-![alt text](image-8.png)
+![alt text](./images/image-8.png)
