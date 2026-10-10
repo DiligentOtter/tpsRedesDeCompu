@@ -255,12 +255,12 @@ Los paquetes extra de TCP permiten:
 
 **Captura de las terminales**
 
-![alt text](image.png)
+![alt text](./images/image222.png)
 
 **Captura de wireshark** 
 
 Aqui podemos ver el trafico capturado desde whireshark, una vez ejecutando los codigos tanto de servidor como cliente
-![alt text](image-1.png)
+![alt text](./images/image-122.png)
 
 | Llamada a función | ¿Dónde se ejecuta? | ¿Genera tráfico? | Segmentos / Flags observados en la captura |
 |---|---|---|---|
