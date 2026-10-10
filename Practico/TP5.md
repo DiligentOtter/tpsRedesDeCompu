@@ -250,3 +250,25 @@ Los paquetes extra de TCP permiten:
 **Con UDP:**
 
 ![alt text](./images/image-8.png)
+
+## Item 4: Servidor TCP Mínimo - Sockets en Python
+
+**Captura de las terminales**
+
+![alt text](image.png)
+
+**Captura de wireshark** 
+
+Aqui podemos ver el trafico capturado desde whireshark, una vez ejecutando los codigos tanto de servidor como cliente
+![alt text](image-1.png)
+
+| Llamada a función | ¿Dónde se ejecuta? | ¿Genera tráfico? | Segmentos / Flags observados en la captura |
+|---|---|---|---|
+| **`socket()`** | Servidor y Cliente | **No** | Estos procesos estan ocurriendo internamente en la computadora y no genera trafico |
+| **`bind()`** | Servidor | **No** | Operación local asocia la IP y el puerto `12000` en la tabla de conexiones. |
+| **`listen()`** | Servidor | **No** | Modifica el estado interno del socket a `LISTEN` para comenzar a encolar solicitudes entrantes. |
+| **`connect()`** | Cliente | **Sí** | Paquetes 1880 a 1881- `#1880`: `22570 -> 12000 [SYN]`<br>- `#1881`: `12000 -> 22570 [SYN, ACK]` |
+| **`accept()`** | Servidor | **Sí** | Paquete 1882: `22570 -> 12000 [ACK]`. La función `accept()` se desbloquea al recibir este último ACK del cliente. |
+| **`sendall()`** | Servidor y Cliente | **Sí** | Paquetes 1883 y 1885: `#1883`: `22570 -> 12000 [PSH, ACK]` (22 bytes)<br>- `#1885`: `12000 -> 22570 [PSH, ACK]` (32 bytes) |
+| **`recv()`** | Servidor y Cliente | **Sí** (Confirmación ACK) | Paquetes 1884 y 1886: `recv()` espera datos. Al recibirlos, el kernel envía confirmaciones `[ACK]` (`Len=0`). |
+| **`close()`** | Ambos | **Sí** | Paquetes 1887 a 1890  Cierre ordenado de la conexión TCP con banderas `[FIN, ACK]` y `[ACK]`. |
