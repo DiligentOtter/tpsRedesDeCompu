@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | **Comisión** | ICOMP 24-3 |
-| **Docente** | SANTIAGO MARTIN HENN |
+| **Docente** | Oliva, Facundo |
 | **Año** | 2026 |
 
 **Alumnos:**
@@ -98,12 +98,12 @@ Las computadoras se conectan al switch con cables **derechos** como el armado en
 
 #### 1. Configuración manual de la interfaz de red
 
-> **TODO:** completar con los datos reales de cada PC (y agregar captura de pantalla de la configuración).
+> **TODO:** completar sistema operativo de cada PC, el grupo con el que compartimos el switch y agregar captura de pantalla de la configuración.
 
 | Equipo | Sistema operativo | Dirección IPv4 | Máscara de subred | Default gateway |
 |---|---|---|---|---|
-| PC grupo propio | _completar_ | _ej. 192.168.1.10_ | _ej. 255.255.255.0 (/24)_ | _ej. 192.168.1.1_ |
-| PC otro grupo (_completar grupo_) | _completar_ | _ej. 192.168.1.20_ | _ej. 255.255.255.0 (/24)_ | _ej. 192.168.1.1_ |
+| PC grupo propio | _completar_ | 192.168.1.10 | 255.255.255.0 (/24) | 192.168.1.1 |
+| PC otro grupo (_completar grupo_) | _completar_ | 192.168.1.20 | 255.255.255.0 (/24) | 192.168.1.1 |
 
 La configuración se puede hacer por interfaz gráfica o por consola:
 
@@ -124,9 +124,6 @@ La configuración se puede hacer por interfaz gráfica o por consola:
 - **Dirección IPv4:** elegimos direcciones del rango privado 192.168.0.0/16 (RFC 1918), que no son ruteables en Internet y no generan conflictos con redes públicas. Cada PC tiene una dirección distinta dentro de la misma red para que no haya duplicados.
 - **Máscara de subred:** con 255.255.255.0 (/24), los tres primeros octetos identifican la red (192.168.1.0) y el último el host. Así todas las PCs quedan en la misma subred y pueden comunicarse directamente a través del switch, resolviendo las MAC con ARP. La red admite hasta 254 hosts, más que suficiente para el laboratorio.
 - **Default gateway:** configuramos 192.168.1.1 por convención, pero en esta actividad **no tiene efecto**. No hay ningún router conectado al switch, y todo el tráfico va dirigido a hosts de la misma subred, que se entrega directamente sin pasar por el gateway. El gateway solo se usaría para alcanzar destinos fuera de 192.168.1.0/24, como Internet, que en esta LAN aislada no son alcanzables. Se podría haber dejado vacío y todo habría funcionado igual.
-
-> **TODO:** si las direcciones usadas fueron otras, ajustar esta justificación.
-
 #### 2. Conexión al switch y prueba con ping
 
 Conectamos una computadora de cada grupo al switch utilizando cables verificados con el tester. Al conectar, el LED del puerto correspondiente en el switch se encendió, indicando enlace en capa física.
