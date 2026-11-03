@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | **Comisión** | ICOMP 24-3 |
-| **Docente** | Oliva, Facundo |
+| **Docente** | SANTIAGO MARTIN HENN |
 | **Año** | 2026 |
 
 **Alumnos:**
