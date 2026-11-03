@@ -9,7 +9,7 @@
 | | |
 |---|---|
 | **Comisión** | ICOMP 24-3 |
-| **Docente** | Oliva, Facundo |
+| **Docente** | SANTIAGO MARTIN HENN |
 | **Año** | 2026 |
 
 **Alumnos:**
@@ -102,8 +102,8 @@ Las computadoras se conectan al switch con cables **derechos** como el armado en
 
 | Equipo | Sistema operativo | Dirección IPv4 | Máscara de subred | Default gateway |
 |---|---|---|---|---|
-| PC grupo propio | _completar_ | 192.168.1.10 | 255.255.255.0 (/24) | 192.168.1.1 |
-| PC otro grupo (_completar grupo_) | _completar_ | 192.168.1.20 | 255.255.255.0 (/24) | 192.168.1.1 |
+| PC-1 | _completar_ | 192.168.1.10 | 255.255.255.0 (/24) | 192.168.1.1 |
+| PC-2| _completar_ | 192.168.1.20 | 255.255.255.0 (/24) | 192.168.1.1 |
 
 La configuración se puede hacer por interfaz gráfica o por consola:
 
