@@ -83,7 +83,7 @@ Una direccion **MAC** solo tiene alcance dentro de la red local. Si el destino e
 
 |Capa|Cambios|Se Mantienen|
 |----|-------|------------|
-|Ethernet|MAC de origen y destino se intercambian. Type `0x0800` en request y `0x8100` en el relpy|-|
+|Ethernet|MAC de origen y destino se intercambian.|Type `0x0800` (IPv4) en el request y en el reply.|
 |IPv4|IP de origen y destino se intercambian|V4, largo de cabecera (20 B), largo total (60 B), flags, fragmentacion, Protocol (1)|
 |ICMP|En request `type = 8`; `checksum = 0x4d46`, en reply `type = 0`; `checksum = 0x5546`. |Code (0), indentifier (0x0001), Sequence Number (21), Data (32 bytes)|
 
@@ -136,6 +136,95 @@ La caché ARP es una tabla temporal almacenada en la memoria del sistema operati
 
 Primero voy a consultar en mi caché ARP local para saber si ya guardé a qué MAC corresponde la IP en una comunicación anterior. Si ya está en la caché, armo la trama con esa MAC. Si no la tengo en caché, genero un ARP request solicitando a la red local quién es el dispositivo que tiene esa IP, el dispositivo que tiene esa IP me va a responder indicando su MAC. Luego voy a guardar ese dato en la caché de ARP para poder encapsular y enviar la trama definitiva.
 
+### E) Caché ARP del gateway
+
+Configuración de red de la computadora (`ip addr` e `ip route`): interfaz `enp4s0`, IP `192.168.100.2/24`, MAC `7c:10:c9:d3:0f:c6` y gateway por defecto `192.168.100.1`.
+
+![ip addr e ip route](images/ipaddr.png)
+
+Ping al gateway:
+
+![ping al gateway](images/ping.png)
+
+Caché ARP de la computadora (`ip neigh show`). El gateway `192.168.100.1` figura con la MAC `d8:6d:17:29:4f:8e`:
+
+![alt text](./images/gateway.png)
+
+Echo Request enviado al gateway con `ping`. La MAC destino de la trama Ethernet es `d8:6d:17:29:4f:8e` (HuaweiTechno), como se ve también en el hexadecimal (`d8 6d 17 29 4f 8e`):
+
+![Echo Request con MAC destino](images/wiresharkping.png)
+
+**¿La MAC asociada al gateway coincide con la MAC destino que vieron anteriormente?**
+Sí. La MAC del gateway en la caché ARP (`d8:6d:17:29:4f:8e`) coincide con la MAC destino de la trama Ethernet del Echo Request. El equipo usó la entrada de la caché para armar la trama, y esa MAC es la del router, no la del destino final del ping.
+
+### F) Generación y captura de tráfico ARP
+
+#### Opción B: borrar la entrada del gateway
+
+Con Wireshark capturando en `enp4s0` (filtro `arp || icmp`):
+
+```bash
+sudo ip neigh del 192.168.100.1 dev enp4s0 && ping -4 -c 2 192.168.100.1
+```
+
+En la captura el orden fue: ARP Request (#318), ARP Reply (#319) y Echo Request (#320). El ping espera a conocer la MAC del gateway antes de salir.
+
+**ARP Request (#318):**
+
+![ARP Request](images/wiresharkArp.png)
+
+**Tabla comparativa:**
+
+| Campo | ARP Request (#318) | ARP Reply (#319) |
+|---|---|---|
+| MAC destino (Ethernet) | `ff:ff:ff:ff:ff:ff` (broadcast) | `7c:10:c9:d3:0f:c6` (mi equipo) |
+| MAC origen (Ethernet) | `7c:10:c9:d3:0f:c6` (ASUSTek, mi equipo) | `d8:6d:17:29:4f:8e` (HuaweiTechno, gateway) |
+| Opcode | 1 (request) | 2 (reply) |
+| Sender MAC address | `7c:10:c9:d3:0f:c6` | `d8:6d:17:29:4f:8e` |
+| Sender IP address | `192.168.100.2` | `192.168.100.1` |
+| Target MAC address | `00:00:00:00:00:00` | `7c:10:c9:d3:0f:c6` |
+| Target IP address | `192.168.100.1` | `192.168.100.2` |
+
+#### Opción A: ping a una IP inexistente
+
+```bash
+ip neigh show
+ping -4 -c 2 192.168.100.253
+ip neigh show
+```
+
+![ipinexistente](./images/ipinexistente.png)
+
+#### Respuestas
+
+**a) ¿Por qué el Request va a una dirección broadcast y el Reply no? ¿Qué valor tiene Target MAC address en el Request y por qué?**
+
+El Request va a broadcast (`ff:ff:ff:ff:ff:ff`) porque quien pregunta no conoce la MAC del dueño de la IP, así que le pregunta a toda la LAN. El Reply va unicast porque quien responde ya sabe a quién contestarle: la MAC de quien preguntó venía en el Sender MAC del Request. El Target MAC del Request vale `00:00:00:00:00:00` porque es justamente el dato que se busca; se deja vacío para que el Reply lo complete.
+
+**b) En el encabezado Ethernet de la trama ARP, ¿qué valor tiene el campo Type? ¿Hay un encabezado IP? ¿Qué les dice eso sobre dónde "vive" ARP?**
+
+El Type vale `0x0806` (ARP). No hay encabezado IP: ARP se encapsula directamente en la trama Ethernet, y las IPs viajan solo como datos dentro del mensaje (Sender IP y Target IP). Esto indica que ARP "vive" entre la capa 2 y la 3: depende de Ethernet para viajar, pero resuelve direcciones de capa 3. No puede ir dentro de IP porque se necesita justamente para obtener la MAC con la que se enviaría ese paquete IP. El Request mide 42 bytes (14 de Ethernet y 28 de ARP). El Reply aparece con 60 bytes por el relleno que Ethernet agrega hasta el mínimo.
+
+**c) Con la Opción A (IP inexistente): ¿cuántos ARP Request aparecieron? ¿Hubo Reply? ¿Apareció algún ICMP Echo Request en la captura? Expliquen por qué.**
+
+Aparecieron varios ARP Request en broadcast (`Who has 192.168.100.253? Tell 192.168.100.2`) y ningún ARP Reply, porque nadie tiene esa IP. Tampoco apareció ningún ICMP Echo Request: sin la MAC destino no se puede armar la trama Ethernet, así que el ping nunca sale a la red. En la terminal se ve que `ping` terminó con `Destination Host Unreachable` y 100% de paquetes perdidos, y que la entrada `192.168.100.253` quedó en la caché en estado `FAILED`.
+
+**d) Volvieron a hacer ping al mismo destino un minuto después: ¿apareció ARP de nuevo? Revisen la caché ARP. ¿Qué ventaja tiene la caché y qué problema podría causar si una entrada quedara vieja?**
+
+```bash
+sudo ip neigh del 192.168.100.1 dev enp4s0 && ping -4 -c 2 192.168.100.1
+ip neigh show
+sleep 60
+ip neigh show
+ping -4 -c 2 192.168.100.1
+```
+
+![60s](./images/60s.png)
+
+En la caché, la entrada del gateway figuraba como `REACHABLE` (`d8:6d:17:29:4f:8e`) tanto antes como después de esperar 60 segundos, y el segundo ping salió sin problemas, usando la entrada guardada. En otra captura de este mismo equipo, un tiempo después del primer intercambio apareció un ARP Request **unicast** hacia el gateway (dirigido a su MAC ya conocida, no a broadcast): es la revalidación que hace Linux cuando una entrada pasa de `REACHABLE` a `STALE`. El comportamiento exacto depende del sistema operativo y del tráfico de la red; en este caso el router además genera tráfico hacia la computadora, lo que ayuda a mantener la entrada fresca.
+
+La **ventaja** de la caché es que evita enviar un ARP por cada paquete, lo que reduce el tráfico y la latencia. El **problema** de una entrada vieja es que las tramas se enviarían a una MAC incorrecta si el equipo cambió de placa o de IP, y se perdería la comunicación hasta que la entrada venza o se revalide. También es el punto débil que aprovecha el ARP spoofing.
+
 ## Item 3: TCP y UDP "a mano" con ncat
 
 ### A) ¿Qué significa "establecer una conexión"? ¿Dónde existe una conexión TCP?
@@ -177,34 +266,32 @@ tshark -r TCP.pcapng
 
 ### Práctico UDP
 
-**Captura Wireshark:**
+**Captura Wireshark** (interfaz `lo`, filtro `udp.port == 12001`):
 
-![alt text](./images/image-4.png)
+![Captura UDP](./images/image-4.png)
 
 **Terminales:**
 
-![alt text](./images/image-5.png)
+Cliente (`ncat -v -u 127.0.0.1 12001`):
 
-![alt text](./images/image-6.png)
+![Terminal cliente UDP](./images/image-6.png)
+
+Servidor (`ncat -v -u -l 12001`). Recién muestra `Connection from 127.0.0.1:<puerto>` cuando llega el primer datagrama del cliente, no al ejecutar el comando del cliente:
+
+![Terminal servidor UDP](./images/image-5.png)
 
 **Datos de la captura:**
 
-```
-    1 0.000000000     127.0.0.1 → 127.0.0.1    TCP 66 58576 → 63342 [ACK] Seq=1 Ack=1 Win=64 Len=0 TSval=499136540 TSecr=3479431858
-    2 0.000003126 0.000003126    127.0.0.1 → 127.0.0.1    TCP 66 58550 → 63342 [ACK] Seq=1 Ack=1 Win=1631 Len=0 TSval=1744292546 TSecr=3360742043
-    3 0.000009528 0.000006402    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58576 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3479476913 TSecr=499120156
-    4 0.000009899 0.000000371    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58550 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3360787098 TSecr=1744272066
-    5 0.000017884 0.000007985    127.0.0.1 → 127.0.0.1    TCP 66 58560 → 63342 [ACK] Seq=1 Ack=1 Win=78 Len=0 TSval=858076343 TSecr=1962185907
-    6 0.000022803 0.000004919    127.0.0.1 → 127.0.0.1    TCP 66 58566 → 63342 [ACK] Seq=1 Ack=1 Win=64 Len=0 TSval=2554351675 TSecr=3516550886
-    7 0.000025939 0.000003136    127.0.0.1 → 127.0.0.1    TCP 66 58574 → 63342 [ACK] Seq=1 Ack=1 Win=64 Len=0 TSval=2565093131 TSecr=3571448562
-    8 0.000029055 0.000003116    127.0.0.1 → 127.0.0.1    TCP 66 58556 → 63342 [ACK] Seq=1 Ack=1 Win=85 Len=0 TSval=304859526 TSecr=2695841910
-    9 0.000033523 0.000004468    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58560 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=1962230962 TSecr=858059959
-   10 0.000035487 0.000001964    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58566 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3516595941 TSecr=2554335291
-   11 0.000036919 0.000001432    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58574 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=3571493617 TSecr=2565076747
-   12 0.000039003 0.000002084    127.0.0.1 → 127.0.0.1    TCP 66 [TCP ACKed unseen segment] 63342 → 58556 [ACK] Seq=1 Ack=2 Win=64 Len=0 TSval=2695886965 TSecr=304839046
-   13 14.145426023 14.145387020    127.0.0.1 → 127.0.0.1    LLC 65 I P, N(R)=48, N(S)=54; DSAP 0x68 Individual, SSAP 0x6e Response
-   14 22.647209429 8.501783406    127.0.0.1 → 127.0.0.1    LLC 66 I P, N(R)=48, N(S)=54; DSAP 0x68 Individual, SSAP 0x6e Response
-```
+La captura contiene 4 datagramas UDP entre `127.0.0.1` y `127.0.0.1`, uno por cada mensaje escrito. Wireshark los rotula como `LLC` en la columna Protocol porque interpreta el texto de los mensajes como un encabezado LLC, pero el panel de detalles muestra `User Datagram Protocol` y el puerto 12001.
+
+| N° | Tiempo (s) | Largo (bytes) | Protocolo (columna) | Transporte real |
+|---|---|---|---|---|
+| 16 | 57.216 | 65 | LLC | UDP |
+| 29 | 71.593 | 76 | LLC | UDP |
+| 76 | 190.782 | 47 | LLC | UDP |
+| 111 | 234.347 | 71 | LLC | UDP |
+
+Entre estos datagramas no aparece ningún paquete parecido a un handshake ni a un ACK.
 
 ### Respuestas
 
