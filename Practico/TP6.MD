@@ -108,7 +108,7 @@ El armado de un cable de red de transmisión directa, también conocido como cab
 
 Se optó por utilizar Packet Sender por la facilidad que ofrece su interfaz gráfica y su rapidez. En las imágenes se observa el envío de paquetes UDP desde la IP `.20` hacia la `.10` a través del puerto `33051`:
 
-![alt text](images/UDP_enviado.jpeg)
+![alt text](images/UDP_recibido%20(4).jpeg)
 
 Aquí se visualiza la recepción del paquete UDP enviado:
 
@@ -116,7 +116,7 @@ Aquí se visualiza la recepción del paquete UDP enviado:
 
 En esta captura de pantalla de Wireshark podemos examinar cómo viajan los paquetes y apreciar asimismo el protocolo ARP, el cual se utiliza para completar la tabla propia de direcciones MAC de la PC:
 
-![alt text](images/wireShark.jpeg)
+![alt text](images/UDP_recibido%20(2).jpeg)
 
 ---
 
