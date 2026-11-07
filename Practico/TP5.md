@@ -192,8 +192,12 @@ ip neigh show
 ping -4 -c 2 192.168.100.253
 ip neigh show
 ```
+terminal
 
-![ipinexistente](./images/ipinexistente.png)
+![ipinexistente](./images/ipinexistentew.png)
+
+wireshark
+![wiresharkIpInexistente](./images/ipinexistente.png)
 
 #### Respuestas
 
@@ -218,7 +222,7 @@ sleep 60
 ip neigh show
 ping -4 -c 2 192.168.100.1
 ```
-
+captura wireshark
 ![60s](./images/60s.png)
 
 En la caché, la entrada del gateway figuraba como `REACHABLE` (`d8:6d:17:29:4f:8e`) tanto antes como después de esperar 60 segundos, y el segundo ping salió sin problemas, usando la entrada guardada. En otra captura de este mismo equipo, un tiempo después del primer intercambio apareció un ARP Request **unicast** hacia el gateway (dirigido a su MAC ya conocida, no a broadcast): es la revalidación que hace Linux cuando una entrada pasa de `REACHABLE` a `STALE`. El comportamiento exacto depende del sistema operativo y del tráfico de la red; en este caso el router además genera tráfico hacia la computadora, lo que ayuda a mantener la entrada fresca.
@@ -243,8 +247,20 @@ El proceso le pidió al SO (con `bind` y `listen`) que reserve ese puerto y le e
 
 **Captura Wireshark:**
 
-![alt text](./images/image-1.png)
+![wireshark](./images/capturawiresharkTCP.png)
+```
 
+    1 0.000000000     127.0.0.1 → 127.0.0.1    TCP 74 35288 → 12000 [SYN] Seq=0 Win=65495 Len=0 MSS=65495 SACK_PERM TSval=1227306278 TSecr=0 WS=1024
+    2 0.000011983 0.000011983    127.0.0.1 → 127.0.0.1    TCP 74 12000 → 35288 [SYN, ACK] Seq=0 Ack=1 Win=65483 Len=0 MSS=65495 SACK_PERM TSval=948207122 TSecr=1227306278 WS=1024
+    3 0.000021400 0.000009417    127.0.0.1 → 127.0.0.1    TCP 66 35288 → 12000 [ACK] Seq=1 Ack=1 Win=65536 Len=0 TSval=1227306278 TSecr=948207122
+    4 15.329461127 15.329439727    127.0.0.1 → 127.0.0.1    TCP 71 35288 → 12000 [PSH, ACK] Seq=1 Ack=1 Win=65536 Len=5 TSval=1227321608 TSecr=948207122
+    5 15.329480022 0.000018895    127.0.0.1 → 127.0.0.1    TCP 66 12000 → 35288 [ACK] Seq=1 Ack=6 Win=65536 Len=0 TSval=948222452 TSecr=1227321608
+    6 19.016442200 3.686962178    127.0.0.1 → 127.0.0.1    TCP 72 12000 → 35288 [PSH, ACK] Seq=1 Ack=6 Win=65536 Len=6 TSval=948226139 TSecr=1227321608
+    7 19.016456327 0.000014127    127.0.0.1 → 127.0.0.1    TCP 66 35288 → 12000 [ACK] Seq=6 Ack=7 Win=65536 Len=0 TSval=1227325295 TSecr=948226139
+    8 25.734038667 6.717582340    127.0.0.1 → 127.0.0.1    TCP 66 35288 → 12000 [FIN, ACK] Seq=6 Ack=7 Win=65536 Len=0 TSval=1227332012 TSecr=948226139
+    9 25.734084673 0.000046006    127.0.0.1 → 127.0.0.1    TCP 66 12000 → 35288 [FIN, ACK] Seq=7 Ack=7 Win=65536 Len=0 TSval=948232856 TSecr=1227332012
+   10 25.734102346 0.000017673    127.0.0.1 → 127.0.0.1    TCP 66 35288 → 12000 [ACK] Seq=7 Ack=8 Win=65536 Len=0 TSval=1227332012 TSecr=948232856
+```
 **Terminales:**
 
 ![alt text](./images/image-2.png)
